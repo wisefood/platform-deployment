@@ -1,0 +1,9 @@
+directory: charts
+repositories:
+- name: stable
+  url: https://charts.helm.sh/stable
+- name: grafana
+  url: https://grafana.github.io/helm-charts
+- name: elastic
+  url: https://helm.elastic.cos
+requires:
