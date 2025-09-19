@@ -8,6 +8,9 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import List, Optional
+from kubernetes import client, config
+import string
+import random
 
 REPO_ROOT = Path(__file__).resolve().parent
 ENV_DIR = REPO_ROOT / "environments"
@@ -118,6 +121,95 @@ def install_helm():
 
 
 # ---------------------------
+# Environment & Secret Builders
+# ---------------------------
+
+def load_yaml(yaml_path: Path) -> dict:
+    import yaml
+    with open(yaml_path, "r") as f:
+        return yaml.safe_load(f)
+    
+def generate_random_string(length=40, chunk_size=8, separator='-'):
+    characters = string.ascii_letters + string.digits
+    raw_string = ''.join(random.choices(characters, k=length))
+    chunks = [raw_string[i:i+chunk_size] for i in range(0, length, chunk_size)]
+    return separator.join(chunks)    
+
+def create_k8s_secret(secret_name: str, namespace: str, data: dict) -> client.V1Secret:
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    metadata = client.V1ObjectMeta(name=secret_name, namespace=namespace)
+    secret = client.V1Secret(metadata=metadata, string_data=data)
+    try:
+        v1.create_namespaced_secret(namespace=namespace, body=secret)
+        info(f"Created secret '{secret_name}' in namespace '{namespace}'")
+    except client.exceptions.ApiException as e:
+        if e.status == 409:
+            warning(f"Secret '{secret_name}' already exists in namespace '{namespace}'")
+        else:
+            error(f"Failed to create secret: {e}")
+    return secret
+
+
+def generate_sample_yaml(file_path="example_config.yaml"):
+    """
+    Generates a YAML configuration file with sample values and comprehensive comments.
+    """
+    yaml_content = """# This is a sample configuration file for the WiseFood platform deployment. It is provided 
+# as input to the bootstrap script for generating Kubernetes secrets and
+# configuring the Tanka environment.
+
+# Environment name (e.g., "staging", "production", "minikube.dev")
+env: "minikube.dev"
+
+# Define either "amazon" for AWS or "minikube" for local Kubernetes
+platform: "minikube"
+
+# The Kubernetes context to use
+k8s_context: "minikube"
+
+# The Kubernetes namespace for deployment
+namespace: "wisefood-dev"
+
+# The contact person for this configuration
+author: "dpetrou@athenarc.gr"
+
+dns:
+  - domain: "minikube"  # DNS configuration name, could be "wisefood.gr" or "wisefood-project.eu" for public configs
+  - scheme: "https"  # Scheme to use (e.g., "http" or "https")
+  - subdomains:
+    -  keycloak: "auth"  # Keycloak subdomain
+    -  minio: "minio"  # MinIO subdomain
+    -  primary: "app"  # Main application subdomain
+
+config:
+  - smtp: 
+    - server: "@@YOUR_SMPT_SERVER_URL@@"  # SMTP server address
+    - port: "465"  # SMTP port (e.g., 465 for SSL, 587 for TLS)
+    - username: "@@YOUR_SMPT_SERVER_USERNAME@@"  # SMTP username for authentication
+
+secrets:
+  - sysadmin-pass: "##YOUR_PASSWORD_HERE##" # Password for WiseFood Administrator user 
+  - minio-root-pass: "##YOUR_PASSWORD_HERE##"  # Password for MinIO Root user
+  - postgres-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL default database
+  - wisefood-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL Core system database user
+  - keycloak-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL Keycloak database user 
+  - smpt-pass: "##SMTP-PASSWORD##" # Password for SMTP server (mailing server)
+  - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session management
+    """
+    with open(file_path, "w") as file:
+        file.write(yaml_content)
+
+    info(f"YAML sample configuration file '{file_path}' has been generated successfully.")
+
+def create_env(env_name: str, env_spec: dict):
+    path = ENV_DIR / env_name
+    if path.exists():
+        error(f"Environment '{env_name}' already exists at {path}")
+    path.mkdir(parents=True)
+    
+
+# ---------------------------
 # Repo checks and actions
 # ---------------------------
 
@@ -205,6 +297,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Wisefood Deployment Control Tool")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    # sample
+    p_sample = sub.add_parser("sample", help="Generate a sample YAML configuration file")
+    p_sample.add_argument("-o", "--output", default="example_config.yaml", help="Output file path (default: example_config.yaml)")
+    p_sample.set_defaults(func=lambda args: generate_sample_yaml(file_path=args.output))
+
     # init
     p_init = sub.add_parser("init", help="Initialize directory structure")
     p_init.set_defaults(func=lambda args: (hard_init()))
@@ -217,13 +314,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_list = sub.add_parser("list", help="List available Tanka environments")
     p_list.set_defaults(func=lambda args: print("\n".join(list_envs()) or "(no environments)"))
 
-    # plan (diff)
-    p_plan = sub.add_parser("plan", help="Show diff for an environment")
-    p_plan.add_argument("env", help="Environment name under ./environments")
-    p_plan.set_defaults(func=lambda args: tk_diff(args.env))
-
     # deploy (apply)
-    p_deploy = sub.add_parser("deploy", help="Apply an environment to the cluster")
+    p_deploy = sub.add_parser("env", help="Apply an environment to the cluster")
     p_deploy.add_argument("env", help="Environment name under ./environments")
     p_deploy.add_argument("-y", "--yes", action="store_true", help="Auto-approve apply (-y)")
     p_deploy.set_defaults(func=lambda args: tk_apply(args.env, auto_approve=args.yes))
