@@ -1,0 +1,40 @@
+# This is a sample configuration file for the WiseFood platform deployment. It is provided 
+# as input to the bootstrap script for generating Kubernetes secrets and
+# configuring the Tanka environment.
+# Environment name (e.g., "staging", "production", "minikube.dev")
+env: "minikube.dev"
+
+# Define either "amazon" for AWS or "minikube" for local Kubernetes
+platform: "minikube"
+
+# The Kubernetes context to use
+k8s_context: "minikube"
+
+# The Kubernetes namespace for deployment
+namespace: "wisefood-dev"
+
+# The contact person for this configuration
+author: "dpetrou@athenarc.gr"
+
+dns:
+  - domain: "minikube"  # DNS configuration name, could be "wisefood.gr" or "wisefood-project.eu" for public configs
+  - scheme: "https"  # Scheme to use (e.g., "http" or "https")
+  - subdomains:
+    -  keycloak: "auth"  # Keycloak subdomain
+    -  minio: "minio"  # MinIO subdomain
+    
+config:
+  - smtp: 
+    - server: "@@YOUR_SMPT_SERVER_URL@@"  # SMTP server address
+    - port: "465"  # SMTP port (e.g., 465 for SSL, 587 for TLS)
+    - username: "@@YOUR_SMPT_SERVER_USERNAME@@"  # SMTP username for authentication
+
+secrets:
+  - sysadmin-pass: "##YOUR_PASSWORD_HERE##" # Password for WiseFood Administrator user 
+  - minio-root-pass: "##YOUR_PASSWORD_HERE##"  # Password for MinIO Root user
+  - postgres-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL default database
+  - wisefood-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL Core system database user
+  - keycloak-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL Keycloak database user 
+  - smpt-pass: "##SMTP-PASSWORD##" # Password for SMTP server (mailing server)
+  - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session management
+    
