@@ -31,7 +31,9 @@
     KC_HTTP_ENABLED: "true",
     KC_HEALTH_ENABLED: "true",
     REALM: 'master',
-    KC_WISEFOOD_CLIENT_ID: "wisefood-svc",
+    KC_WISEFOOD_PUBLIC_CLIENT_ID: "wisefood-ui",
+    KC_WISEFOOD_PRIVATE_CLIENT_ID: "wisefood-api",
+    KC_MINIO_CLIENT_ID: "minio",
     KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true",
   },
 

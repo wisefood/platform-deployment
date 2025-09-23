@@ -8,11 +8,11 @@ local secrets = import 'secrets.libsonnet';
   _tk_env:: tk_env.spec,
   _config+:: {
     namespace: tk_env.spec.namespace,
-    dynamicStorageClass: 'ebs-sc',
+    dynamicStorageClass: 'csi-hostpath-sc',
   },
   provisioning:: {
     namespace: $._config.namespace,
-    dynamic_volume_storage_class: 'ebs-sc',
+    dynamic_volume_storage_class: 'csi-hostpath-sc',
   },
   system:: {
     dns: {
@@ -34,7 +34,10 @@ local secrets = import 'secrets.libsonnet';
       ROOT_DOMAIN: "wisefood.gr",
       KEYCLOAK_SUBDOMAIN: "auth",
       MINIO_SUBDOMAIN: "s3",
-    }
+    },
+    admin: {
+      email: "dpetrou@athenarc.gr",
+    },
   },
   configuration::
     self.system
@@ -74,7 +77,7 @@ local secrets = import 'secrets.libsonnet';
           POSTGRES:"wisefood/postgres:latest",
           MINIO:"quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z-cpuv1",
           KEYCLOAK:"wisefood/keycloak:latest",
-          KEYCLOAK_INIT:"petroud/stelar-tuc:kcinit",
+          KEYCLOAK_INIT:"wisefood/keycloak-init:latest",
           REDIS:"redis:7",
         },
     }
@@ -90,7 +93,9 @@ local secrets = import 'secrets.libsonnet';
     import 'db.libsonnet',
     import 'redis.libsonnet',
     import 'keycloak.libsonnet',
-    import 'minio.libsonnet'
+    import 'minio.libsonnet',
+    import 'ingress.libsonnet',
+    import 'sysinit.libsonnet',
   ],
   /*
   Translate to manifests. This will call the
