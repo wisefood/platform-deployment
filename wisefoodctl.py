@@ -237,7 +237,7 @@ secrets:
   - postgres-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL postgres (default) user
   - wisefood-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL wisefood user
   - keycloak-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL keycloak user 
-  - smpt-pass: "##SMTP-PASSWORD##" # Password for SMTP server (mailing server)
+  - smtp-pass: "##SMTP-PASSWORD##" # Password for SMTP server (mailing server)
   - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session encryptions
     """
     with open(file_path, "w") as file:
@@ -293,7 +293,7 @@ def generate_secrets(env_spec: dict):
             create_and_apply_k8s_secret(
                 secret_name=secret_name,
                 namespace=namespace,
-                data_dict={secret_name: secret_value},
+                data_dict={"password": secret_value},
             )
     info(f"Secrets for namespace '{namespace}' have been generated and applied.")
 
