@@ -29,7 +29,7 @@
     KEYCLOAK_ADMIN: 'admin',
     JDBC_PARAMS: 'useSsl=false',
     KC_HTTP_ENABLED: "true",
-    KC_HEALTH_ENABLED: "false",
+    KC_HEALTH_ENABLED: "true",
     REALM: 'master',
     KC_WISEFOOD_CLIENT_ID: "wisefood-svc",
     KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true",
