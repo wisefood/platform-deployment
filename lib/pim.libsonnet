@@ -54,12 +54,4 @@
     KEYCLOAK_USER: 'keycloak',
     KEYCLOAK_SCHEMA: 'keycloak',
   },
-
-  ###########################
-  ## MINIO  #################
-  ###########################
-  minio: {
-    MINIO_ROOT_USER: 'root',
-    MINIO_BROWSER_REDIRECT: 'true',
-  },
 }
