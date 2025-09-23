@@ -1,0 +1,26 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/minikube.dev",
+    "namespace": "/home/dpetrou/wisefood/platform-deployment/environments/minikube.dev/main.jsonnet"
+  },
+  "spec": {
+    "contextNames": [
+      "minikube"
+    ],
+    "namespace": "wisefood-dev",
+    "resourceDefaults": {
+      "annotations": {
+        "wisefood.eu/author": "dpetrou@athenarc.gr"
+      },
+      "labels": {
+        "app.kubernetes.io/managed-by": "tanka",
+        "app.kubernetes.io/part-of": "wisefood",
+        "wisefood.deployment": "main"
+      }
+    },
+    "expectVersions": {},
+    "injectLabels": true
+  }
+}
