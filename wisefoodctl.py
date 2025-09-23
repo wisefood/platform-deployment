@@ -234,7 +234,6 @@ config:
 
 secrets:
   - sysadmin-pass: "##YOUR_PASSWORD_HERE##" # Password for WiseFood Administrator user 
-  - minio-root-pass: "##YOUR_PASSWORD_HERE##"  # Password for MinIO root user
   - postgres-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL postgres (default) user
   - wisefood-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL wisefood user
   - keycloak-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL keycloak user 
