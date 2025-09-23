@@ -56,7 +56,7 @@ local DB_CONFIG(pim) = {
             pim.dynamic_volume_storage_class),
 
         postgres_deployment: stateful.new(name="db", containers=[
-            container.new("postgres", pim.images.POSTGRES_IMAGE)
+            container.new("postgres", pim.images.POSTGRES)
             + container.withImagePullPolicy("Always")
             + container.withEnvMap(DB_CONFIG(pim))
             + container.withEnvMap({
