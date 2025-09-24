@@ -36,12 +36,13 @@ local volumeMount = k.core.v1.volumeMount;
                     KEYCLOAK_ADMIN_EMAIL: config.admin.email,
                     KEYCLOAK_REALM: pim.keycloak.REALM,
                     KEYCLOAK_PORT: std.toString(pim.ports.KEYCLOAK),
+                    KEYCLOAK_DOMAIN: config.dns.SCHEME + "://"+config.dns.KEYCLOAK_SUBDOMAIN+"."+config.dns.ROOT_DOMAIN,
                     KUBE_NAMESPACE: pim.namespace,
                     KC_MINIO_CLIENT_ID: pim.keycloak.KC_MINIO_CLIENT_ID,
                     KC_PUBLIC_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PUBLIC_CLIENT_ID,
                     KC_PRIVATE_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,
 
-                    MINIO_REDIRECT: config.dns.SCHEME+"://"+config.dns.MINIO_SUBDOMAIN+"."+config.dns.ROOT_DOMAIN+"/oauth_callback",
+                    MINIO_REDIRECT: config.dns.SCHEME+"://"+config.dns.MINIO_SUBDOMAIN+"."+config.dns.ROOT_DOMAIN+"/console/oauth_callback",
                     PUBLIC_REDIRECT: config.dns.SCHEME+"://"+config.dns.ROOT_DOMAIN+"/*",
 
                     MINIO_ORIGIN: config.dns.SCHEME+"://"+config.dns.MINIO_SUBDOMAIN+"."+config.dns.ROOT_DOMAIN,

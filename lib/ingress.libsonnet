@@ -65,16 +65,18 @@ local ingress(pim, config, name, annotations, host, paths) =
     generate_manifest(pim, config): {
 
         ingress_s3: ingress(pim, config, 
-            "s3", 
+            "s3",
             annotations = {
                 "nginx.ingress.kubernetes.io/proxy-body-size": "5120m",
                 "nginx.ingress.kubernetes.io/proxy-http-version": "1.1",
                 "nginx.ingress.kubernetes.io/proxy-chunked-transfer-encoding": "off",
                 "nginx.ingress.kubernetes.io/proxy-set-header": "Host $http_host; X-Real-IP $remote_addr; X-Forwarded-For $proxy_add_x_forwarded_for; X-Forwarded-Proto $scheme;",
                 "nginx.ingress.kubernetes.io/proxy-set-headers": "Connection '';",
+                "nginx.ingress.kubernetes.io/rewrite-target": "/$1",
             },
             host = config.dns.MINIO_SUBDOMAIN+'.'+config.dns.ROOT_DOMAIN,
             paths = [
+                ["/console/?(.*)",        "ImplementationSpecific", "minio", "minio-minio"],
                 ["/", "Prefix", "minio", "minio-minapi"]
             ]
         ),
