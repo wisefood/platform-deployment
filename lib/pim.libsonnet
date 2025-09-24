@@ -18,6 +18,7 @@
     KEYCLOAK: 8080,
     MINIO:9001,
     MINIOAPI:9000,
+    MONGO:27017,
   },
   
 
