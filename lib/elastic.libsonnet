@@ -32,6 +32,8 @@ local envSource = k.core.v1.envVarSource;
            + container.withVolumeMounts([
                 volumeMount.new("elastic-storage-vol","/usr/share/elasticsearch/data",false)
            ])
+           + container.securityContext.withRunAsUser(1000)
+           + container.securityContext.withRunAsGroup(1000)
         ],
         podLabels={
             'app.kubernetes.io/name': 'data-index',
@@ -39,7 +41,10 @@ local envSource = k.core.v1.envVarSource;
         })
         + stateful.spec.template.spec.withVolumes([
             vol.fromPersistentVolumeClaim("elastic-storage-vol","elastic-storage")
-        ]),
+        ])
+        + stateful.spec.template.spec.securityContext.withFsGroup(1000)
+        + stateful.spec.template.spec.securityContext.withRunAsUser(1000)
+        + stateful.spec.template.spec.securityContext.withRunAsNonRoot(true),
 
        elastic_svc: svcs.headlessService.new("elastic", "elastic", pim.ports.ELASTIC)
     }
