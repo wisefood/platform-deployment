@@ -19,6 +19,8 @@
     MINIO:9001,
     MINIOAPI:9000,
     MONGO:27017,
+    CATALOG: 8000,
+    ELASTIC: 9200,
   },
   
 
@@ -41,6 +43,11 @@
   kafka: {
     KAFKA_BROKER_1_URL: "kafka-cluster:19092",
     KAFKA_BROKER_2_URL: "kafka-cluster:29092",
+  },
+
+  catalog: { 
+    ES_DIM: '384',
+    MINIO_BUCKET: 'catalog',
   },
   
   ###########################

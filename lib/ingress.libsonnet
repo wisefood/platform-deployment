@@ -96,10 +96,12 @@ local ingress(pim, config, name, annotations, host, paths) =
                 "nginx.ingress.kubernetes.io/x-forwarded-prefix": "/$1",
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$3",
                 "nginx.ingress.kubernetes.io/app-root": "/",
+                "nginx.ingress.kubernetes.io/proxy-body-size": "1920m",
             },
             host = config.dns.ROOT_DOMAIN, 
             paths = [
                 ["/", "Prefix", "stelarapi", "apiserver-api"],
+                ["/(dc)(/|$)(.*)", "ImplementationSpecific", "data-catalog", "catalog-dc"],
             ]
         ),
     }    
