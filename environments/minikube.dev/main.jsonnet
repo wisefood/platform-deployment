@@ -30,8 +30,8 @@ local secrets = import 'secrets.libsonnet';
                   (Note: MinIO CONSOLE is served by the
                   PRIMARY subdomain. )
       */
-      SCHEME: "https",
-      ROOT_DOMAIN: "wisefood.gr",
+      SCHEME: "http",
+      ROOT_DOMAIN: "minikube",
       KEYCLOAK_SUBDOMAIN: "auth",
       MINIO_SUBDOMAIN: "s3",
     },
@@ -57,6 +57,8 @@ local secrets = import 'secrets.libsonnet';
         },
         keycloak: {
           sysadmin_pass: "sysadmin-pass",
+          wisefood_api: "kc-wisefood-api-secret",
+          minio: "kc-minio-client-secret",
         },
         api: {
           smtp_pass: "smtp-pass",
@@ -79,6 +81,8 @@ local secrets = import 'secrets.libsonnet';
           KEYCLOAK:"wisefood/keycloak:latest",
           KEYCLOAK_INIT:"wisefood/keycloak-init:latest",
           REDIS:"redis:7",
+          CATALOG: "wisefood/data-catalog:latest",
+          ELASTIC: "docker.elastic.co/elasticsearch/elasticsearch:8.14.3",
         },
     }
     + defaults,
@@ -92,6 +96,8 @@ local secrets = import 'secrets.libsonnet';
   components:: [
     import 'db.libsonnet',
     import 'redis.libsonnet',
+    import 'elastic.libsonnet',
+    import 'catalog.libsonnet',
     import 'keycloak.libsonnet',
     import 'minio.libsonnet',
     import 'ingress.libsonnet',
