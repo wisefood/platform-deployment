@@ -30,7 +30,7 @@ local envSource = k.core.v1.envVarSource;
                 containerPort.newNamed(pim.ports.ELASTIC, "es"),
            ])
            + container.withVolumeMounts([
-                volumeMount.new("elastic-storage-vol","/data",false)
+                volumeMount.new("elastic-storage-vol","/usr/share/elasticsearch/data",false)
            ])
         ],
         podLabels={
