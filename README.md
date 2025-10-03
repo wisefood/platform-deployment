@@ -109,14 +109,14 @@ Before proceeding with the deployment, ensure you have the following prerequisit
     author: "user@example.com"
 
     dns:
-    - domain: "minikube"  # DNS configuration name, could be "wisefood.gr" or "wisefood-project.eu" for public configs
-    - scheme: "http"  # Scheme to use (e.g., "http" or "https")
-    - subdomains:
-        -  keycloak: "auth"  # Keycloak subdomain
-        -  minio: "s3"  # MinIO subdomain
+      domain: "minikube"  # DNS configuration name, could be "wisefood.gr" or "wisefood-project.eu" for public configs
+      scheme: "http"  # Scheme to use (e.g., "http" or "https")
+      subdomains:
+        keycloak: "auth"  # Keycloak subdomain
+        minio: "s3"  # MinIO subdomain
 
     config:
-    - smtp: 
+      smtp: 
         [....]  # SMTP configuration for email services. Not required for local deployments
 
     secrets:
