@@ -2,7 +2,6 @@
 from __future__ import annotations
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -11,6 +10,7 @@ from typing import List, Optional
 from kubernetes import client, config
 import string
 import random
+import textwrap
 import base64
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -149,6 +149,7 @@ def install_helm():
 
 def load_yaml(yaml_path: Path) -> dict:
     import yaml
+
     with open(yaml_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -158,6 +159,7 @@ def generate_random_string(length=40, chunk_size=8, separator="-"):
     raw_string = "".join(random.choices(characters, k=length))
     chunks = [raw_string[i : i + chunk_size] for i in range(0, length, chunk_size)]
     return separator.join(chunks)
+
 
 def create_and_apply_k8s_secret(secret_name: str, namespace: str, data_dict: dict):
     """
@@ -190,7 +192,9 @@ def create_and_apply_k8s_secret(secret_name: str, namespace: str, data_dict: dic
         info(f"Secret '{secret_name}' applied successfully.")
     except client.exceptions.ApiException as e:
         if e.status == 409:
-            warning(f"Secret '{secret_name}' already exists in namespace '{namespace}'. Will not overwrite.")
+            warning(
+                f"Secret '{secret_name}' already exists in namespace '{namespace}'. Will not overwrite."
+            )
         else:
             error(f"Failed to apply secret: {e}")
 
@@ -203,8 +207,8 @@ def generate_sample_yaml(file_path="example_config.yaml"):
 # as input to the bootstrap script for generating Kubernetes secrets and
 # configuring the Tanka environment.
 
-# Environment name (e.g., "staging", "production", "minikube.dev")
-env: "minikube.dev"
+# Tanka Environment name (e.g., "staging", "production", "minikube.dev")
+env: "wisefood.dev"
 
 # Define either "amazon" for AWS or "minikube" for local Kubernetes
 platform: "minikube"
@@ -216,21 +220,20 @@ k8s_context: "minikube"
 namespace: "wisefood-dev"
 
 # The contact person for this configuration
-author: "dpetrou@athenarc.gr"
+author: "user@example.com"
 
 dns:
-  - domain: "minikube"  # DNS configuration name, could be "wisefood.gr" or "wisefood-project.eu" for public configs
-  - scheme: "https"  # Scheme to use (e.g., "http" or "https")
-  - subdomains:
-    -  keycloak: "auth"  # Keycloak subdomain
-    -  minio: "minio"  # MinIO subdomain
-    -  primary: "app"  # Main application subdomain
+  domain: "minikube"  # DNS configuration name, could be "wisefood.gr" or "wisefood-project.eu" for public configs
+  scheme: "http"  # Scheme to use (e.g., "http" or "https")
+  subdomains:
+    keycloak: "auth"  # Keycloak subdomain
+    minio: "s3"  # MinIO subdomain
 
 config:
-  - smtp: 
-    - server: "@@YOUR_SMPT_SERVER_URL@@"  # SMTP server address
-    - port: "465"  # SMTP port (e.g., 465 for SSL, 587 for TLS)
-    - username: "@@YOUR_SMPT_SERVER_USERNAME@@"  # SMTP username for authentication
+  smtp: 
+    server: "@@YOUR_SMPT_SERVER_URL@@"  # SMTP server address
+    port: "465"  # SMTP port (e.g., 465 for SSL, 587 for TLS)
+    username: "@@YOUR_SMPT_SERVER_USERNAME@@"  # SMTP username for authentication
 
 secrets:
   - sysadmin-pass: "##YOUR_PASSWORD_HERE##" # Password for WiseFood Administrator user 
@@ -247,16 +250,147 @@ secrets:
     )
 
 
-def generate_env_main(env_spec):
-    pass
+def generate_env_main(env_name, env_spec):
+    """Generate the main.jsonnet file for the environment 
+    after configuring the relevant field from env_spec."""
+    # Determine storage classes based on platform
+    if env_spec["platform"] == "amazon":
+        dynamic_storage_class = "ebs-sc"
+        provisioning_storage_class = "ebs-sc"
+    elif env_spec["platform"] == "minikube" or "okeanos":
+        dynamic_storage_class = "longhorn"
+        provisioning_storage_class = "csi-hostpath-sc"
+    path = ENV_DIR / env_name / "main.jsonnet"
+
+    jsonnet_content = textwrap.dedent(
+        f"""
+        local tk_env = import 'spec.json';
+        local urllib = import "urllib.libsonnet";
+        local g = import 'generate.libsonnet';
+        local defaults = import 'pim.libsonnet';
+        local secrets = import 'secrets.libsonnet';
+
+        {{
+            _tk_env:: tk_env.spec,
+            _config+:: {{
+                namespace: tk_env.spec.namespace,
+                dynamicStorageClass: '{dynamic_storage_class}',
+            }},
+            provisioning:: {{
+                namespace: $._config.namespace,
+                dynamic_volume_storage_class: '{provisioning_storage_class}',
+            }},
+            system:: {{
+                dns: {{
+                    /*
+                    In order for the system to be able to operate,
+                    (2) subdomains (belonging to ROOT_DOMAIN) are needed:
+                    - KEYCLOAK: Keycloak SSO server needs a dedicated
+                                domain in order to serve SSO to services.
+                                We choose here to use subdomain which
+                                will work just fine.
+                    - MINIO_API: In order to avoid conflicts with MinIO
+                                paths (confusing a MinIO path for a
+                                reverse proxy path) we choose to use
+                                separate subdomain for the MinIO API only
+                                (Note: MinIO CONSOLE is served by the
+                                PRIMARY subdomain. )
+                    */
+                    SCHEME: "{env_spec['dns']['scheme']}",
+                    ROOT_DOMAIN: "{env_spec['dns']['domain']}",
+                    KEYCLOAK_SUBDOMAIN: "{env_spec['dns']['subdomains']['keycloak']}",
+                    MINIO_SUBDOMAIN: "{env_spec['dns']['subdomains']['minio']}",
+                }},
+                admin: {{
+                    email: "{env_spec['author']}",
+                }},
+            }},
+            configuration::
+                self.system
+                + {{
+                    api: {{
+                        SMTP_SERVER: "{env_spec['config']['smtp']['server']}",
+                        SMTP_PORT: "{env_spec['config']['smtp']['port']}",
+                        SMTP_USERNAME: "{env_spec['config']['smtp']['username']}",
+                    }}
+                }}
+                + {{
+                secrets: {{
+                    db: {{
+                        postgres: "postgres-db-pass",
+                        system: "wisefood-db-pass",
+                        keycloak: "keycloak-db-pass",
+                    }},
+                        keycloak: {{
+                        sysadmin_pass: "sysadmin-pass",
+                        wisefood_api: "kc-wisefood-api-secret",
+                        minio: "kc-minio-client-secret",
+                    }},
+                        api: {{
+                        smtp_pass: "smtp-pass",
+                        session_secret: "session-secret",
+                    }},
+                        minio: {{
+                        minio_root: "sysadmin-pass",
+                    }},
+                        mongo: {{
+                        mongo_root: "mongo-pass",
+                    }},
+                }}
+                }},
+            ##########################################
+            ## The Platform Independent Model ########
+            ##########################################
+            pim::
+                self.provisioning
+                + {{
+                    images: {{
+                        POSTGRES:"wisefood/postgres:latest",
+                        MINIO:"quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z-cpuv1",
+                        KEYCLOAK:"wisefood/keycloak:latest",
+                        KEYCLOAK_INIT:"wisefood/keycloak-init:latest",
+                        REDIS:"redis:7",
+                        CATALOG: "wisefood/data-catalog:latest",
+                        ELASTIC: "docker.elastic.co/elasticsearch/elasticsearch:8.14.3",
+                    }},
+                }}
+                + defaults,
+
+            /*
+            Here the library for each component is
+            defined in order to use them for manifest
+            generation later on. The services included
+            here will be deployed in the K8s cluster.
+            */
+            components:: [
+                import 'db.libsonnet',
+                import 'redis.libsonnet',
+                import 'elastic.libsonnet',
+                import 'catalog.libsonnet',
+                import 'keycloak.libsonnet',
+                import 'minio.libsonnet',
+                import 'ingress.libsonnet',
+                import 'sysinit.libsonnet',
+            ],
+            /*
+            Translate to manifests. This will call the
+            manifest function of each component above,
+            passing the PIM and Config as arguments. This
+            will generate the manifests for all services.
+            */
+            manifests: g.generate_manifest($.pim, $.configuration, $.components)
+        }}
+        """)
+    
+    with open(path, "w") as json_file:
+        json_file.write(jsonnet_content)
+    info(f"Environment {env_name}, main.jsonnet file updated")     
 
 def generate_spec_json(env_name: str, env_spec: dict):
-    path = ENV_DIR / env_name / 'spec.json'
+    path = ENV_DIR / env_name / "spec.json"
     with open(path, "r") as spec_file:
         spec_data = json.load(spec_file)
-    spec_data["metadata"][
-        "namespace"
-    ] = str(ENV_DIR / env_name / 'main.jsonnet')
+    spec_data["metadata"]["namespace"] = str(ENV_DIR / env_name / "main.jsonnet")
     spec_data["spec"]["injectLabels"] = True
     spec_data["spec"]["resourceDefaults"]["annotations"] = {
         "wisefood.eu/author": env_spec["author"]
@@ -271,13 +405,24 @@ def generate_spec_json(env_name: str, env_spec: dict):
         json.dump(spec_data, json_file, indent=2)
 
     info(f"Environment {env_name}, spec.json file updated")
-    
+
+
 def generate_env(env_name, env_spec):
     # Generate the tanka env structure
     run(
-        ["tk", "env", "add", str(ENV_DIR / env_name), "--context-name", env_spec["k8s_context"], "--namespace", env_spec["namespace"]],
+        [
+            "tk",
+            "env",
+            "add",
+            str(ENV_DIR / env_name),
+            "--context-name",
+            env_spec["k8s_context"],
+            "--namespace",
+            env_spec["namespace"],
+        ],
         check=True,
     )
+
 
 def generate_secrets(env_spec: dict):
     """
@@ -297,24 +442,29 @@ def generate_secrets(env_spec: dict):
             )
     info(f"Secrets for namespace '{namespace}' have been generated and applied.")
 
+
 def create_env(config_yaml_path: str, force: bool = False):
 
     try:
         env_spec = load_yaml(config_yaml_path)
         env_name = env_spec["env"]
     except Exception as e:
-        error(f"Could not parse deployment configuration file or generate environment: {e}")
+        error(
+            f"Could not parse deployment configuration file or generate environment: {e}"
+        )
 
     path = ENV_DIR / env_name
     if path.exists() and any(path.iterdir()) and not force:
-        error(f"Environment '{env_name}' already exists at {path} and contains files. Use --force carefully if want to overwrite it.")
+        error(
+            f"Environment '{env_name}' already exists at {path} and contains files. Use --force carefully if want to overwrite it."
+        )
     path.mkdir(parents=True, exist_ok=force)
     generate_env(env_name, env_spec)
     info(f"Environment '{env_name}' created at {path}")
     generate_spec_json(env_name, env_spec)
     generate_secrets(env_spec)
-    generate_env_main(env_spec)
-   
+    generate_env_main(env_name, env_spec)
+
 
 # ---------------------------
 # Repo checks and actions
@@ -354,6 +504,7 @@ def list_envs() -> List[str]:
         if p.is_dir() and (p / "spec.json").exists():
             envs.append(p.name)
     return envs
+
 
 def deps_update():
     validate_tools()
@@ -403,7 +554,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_sample.set_defaults(func=lambda args: generate_sample_yaml(file_path=args.output))
 
     # init
-    p_init = sub.add_parser("init", help="Initialize directory structure")
+    p_init = sub.add_parser(
+        "init", help="Initialize directory structure and install dependencies"
+    )
     p_init.set_defaults(func=lambda args: (hard_init()))
 
     # validate
@@ -417,10 +570,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # create environment
-    p_deploy = sub.add_parser("env", help="Build an environment based on an input YAML file")
-    p_deploy.add_argument("config_file", help="Path to deployment configuration file (.yaml or .yml)")
-    p_deploy.add_argument("--force", action="store_true", help="Force environment creation, overwriting existing files")
-    p_deploy.set_defaults(func=lambda args: create_env(config_yaml_path=args.config_file, force=args.force))
+    p_deploy = sub.add_parser(
+        "env", help="Build an environment based on an input YAML file"
+    )
+    p_deploy.add_argument(
+        "config_file", help="Path to deployment configuration file (.yaml or .yml)"
+    )
+    p_deploy.add_argument(
+        "--force",
+        action="store_true",
+        help="Force environment creation, overwriting existing files",
+    )
+    p_deploy.set_defaults(
+        func=lambda args: create_env(
+            config_yaml_path=args.config_file, force=args.force
+        )
+    )
 
     # deps
     p_deps = sub.add_parser("deps", help="Manage Jsonnet/Helm chart dependencies")
