@@ -40,7 +40,7 @@ local envSource = k.core.v1.envVarSource;
                 KEYCLOAK_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,
                 KEYCLOAK_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.wisefood_api)+envSource.secretKeyRef.withKey("secret"),
                 POSTGRES_HOST: pim.db.POSTGRES_HOST,
-                POSTGRES_PORT: pim.ports.DB,
+                POSTGRES_PORT: std.toString(pim.ports.DB),
                 POSTGRES_USER: pim.db.WISEFOOD_USER,
                 POSTGRES_DB: pim.db.WISEFOOD_DB,
                 POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
