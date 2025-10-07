@@ -21,6 +21,7 @@
     MONGO:27017,
     CATALOG: 8000,
     ELASTIC: 9200,
+    API: 8000,
   },
   
 
@@ -50,6 +51,9 @@
     MINIO_BUCKET: 'catalog',
   },
   
+  api: {
+    MINIO_BUCKET: 'system',
+  },
   ###########################
   ## DATABASE  ##############
   ###########################

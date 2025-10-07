@@ -103,6 +103,7 @@ local ingress(pim, config, name, annotations, host, paths) =
             host = config.dns.ROOT_DOMAIN, 
             paths = [
                 ["/(dc)(/|$)(.*)", "ImplementationSpecific", "data-catalog", "catalog-dc"],
+                ["/(rest)(/|$)(.*)", "ImplementationSpecific", "wisefood-api", "api-api"]
             ]
         ),
     }    
