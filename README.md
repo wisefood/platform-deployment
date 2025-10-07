@@ -62,7 +62,9 @@ Before proceeding with the deployment, ensure you have the following prerequisit
 - A domain name pointing to your Kubernetes cluster's ingress controller (for production deployments) plus 2 subdomain for auth and S3 services (e.g. `auth.yourdomain.com` and `s3.yourdomain.com`). 
 
     *If you are running on a local cluster like Minikube you can use `s3.minikube` and `auth.minikube` as subdomains*. You may use this script [dns.sh](https://github.com/wisefood/platform-deployment/blob/main/scripts/dns.sh) to add a domain to point to your local minikube cluster (e.g. ./dns.sh s3.minikube). Since Linux can get weird with DNS resolves, you may try alternatives methods such as
-    adding manually the domains to point to the minikube IP (cmd: minikube ip) in the `/etc/hosts` file. 
+    adding manually the domains to point to the minikube IP (cmd: minikube ip) in the `/etc/hosts` file.
+
+- **IMPORTANT**: If you are running the deployment in minikube, make sure to run the [addons.sh](https://github.com/wisefood/platform-deployment/blob/main/scripts/addons.sh) to enable the required addons.
 
 ## Deployment Steps
 1. **Clone this Repository** to your local machine:
