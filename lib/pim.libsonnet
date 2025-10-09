@@ -22,6 +22,7 @@
     CATALOG: 8000,
     ELASTIC: 9200,
     API: 8000,
+    UI: 80,
     FOODSCHOLAR: 8001,
   },
   

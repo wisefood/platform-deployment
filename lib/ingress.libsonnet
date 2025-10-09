@@ -94,16 +94,19 @@ local ingress(pim, config, name, annotations, host, paths) =
             "wisefood",
             annotations = {
                 "nginx.ingress.kubernetes.io/x-forwarded-prefix": "/$1",
-                "nginx.ingress.kubernetes.io/rewrite-target": "/$3",
+                "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
                 "nginx.ingress.kubernetes.io/proxy-body-size": "1920m",
                 "nginx.ingress.kubernetes.io/proxy-buffering": "off",
                 "nginx.ingress.kubernetes.io/proxy-request-buffering": "off",
-
+                "nginx.ingress.kubernetes.io/proxy-connect-timeout": "120s",
+                "nginx.ingress.kubernetes.io/proxy-read-timeout": "120s",
             },
             host = config.dns.ROOT_DOMAIN, 
             paths = [
-                ["/(dc)(/|$)(.*)", "ImplementationSpecific", "data-catalog", "catalog-dc"],
-                ["/(rest)(/|$)(.*)", "ImplementationSpecific", "wisefood-api", "api-api"]
+            ["/", "Prefix", "wisefood-ui", "ui-ui"], 
+            ["/app(/|$)(.*)", "ImplementationSpecific", "wisefood-ui", "ui-ui"],
+            ["/dc(/|$)(.*)", "ImplementationSpecific", "data-catalog", "catalog-dc"],
+            ["/rest(/|$)(.*)", "ImplementationSpecific", "wisefood-api", "api-api"],
             ]
         ),
     }    

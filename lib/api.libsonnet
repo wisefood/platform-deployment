@@ -29,6 +29,7 @@ local envSource = k.core.v1.envVarSource;
                 APP_EXT_DOMAIN: config.dns.SCHEME+'://'+config.dns.ROOT_DOMAIN,
                 ELASTIC_HOST: "http://elastic:"+std.toString(pim.ports.ELASTIC),
                 ES_DIM: pim.catalog.ES_DIM,
+                FOODSCHOLAR_URL: "http://foodscholar:"+std.toString(pim.ports.FOODSCHOLAR),
                 MINIO_ENDPOINT: "http://minio:"+std.toString(pim.ports.MINIOAPI),
                 MINIO_BUCKET: pim.api.MINIO_BUCKET,
                 MINIO_ROOT: 'root',
