@@ -32,6 +32,7 @@ local KEYCLOAK_CONFIG(pim,config) = {
     KC_DB_SCHEMA: pim.db.KEYCLOAK_SCHEMA,
     KEYCLOAK_ADMIN: pim.keycloak.KEYCLOAK_ADMIN,
     KC_HOSTNAME: HOSTNAME(config),
+    KC_PROXY: "edge",
     KC_HOSTNAME_ADMIN: HOSTNAME(config),
     JDBC_PARAMS: pim.keycloak.JDBC_PARAMS,
     KC_HTTP_ENABLED: pim.keycloak.KC_HTTP_ENABLED,    
