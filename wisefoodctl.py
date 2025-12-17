@@ -321,7 +321,7 @@ def generate_env_main(env_name, env_spec):
                         system: "wisefood-db-pass",
                         keycloak: "keycloak-db-pass",
                     }},
-                        keycloak: {{
+                    keycloak: {{
                         sysadmin_pass: "sysadmin-pass",
                         wisefood_api: "kc-wisefood-api-secret",
                         minio: "kc-minio-client-secret",
@@ -346,6 +346,7 @@ def generate_env_main(env_name, env_spec):
                 + {{
                     images: {{
                         POSTGRES:"wisefood/postgres:latest",
+                        API: "wisefood/wisefood-api:latest",
                         MINIO:"quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z-cpuv1",
                         KEYCLOAK:"wisefood/keycloak:latest",
                         KEYCLOAK_INIT:"wisefood/keycloak-init:latest",
@@ -364,6 +365,7 @@ def generate_env_main(env_name, env_spec):
             */
             components:: [
                 import 'db.libsonnet',
+                import 'api.libsonnet',
                 import 'redis.libsonnet',
                 import 'elastic.libsonnet',
                 import 'catalog.libsonnet',

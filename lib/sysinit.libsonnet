@@ -22,6 +22,32 @@ local volumeMount = k.core.v1.volumeMount;
 {
     generate_manifest(pim,config): {
 
+        dbinitjob: job.new("db-init-job")
+            + job.metadata.withLabels({
+                'app.kubernetes.io/name': 'db-init',
+                'app.kubernetes.io/component': 'dbinit',
+            })
+            + job.spec.template.spec.withContainers(containers=[
+                container.new("db-init-container", pim.images.API)
+                + container.withImagePullPolicy("Always")
+                + container.withEnvMap({
+                    POSTGRES_HOST: pim.db.POSTGRES_HOST,
+                    POSTGRES_PORT: std.toString(pim.ports.DB),
+                    POSTGRES_USER: pim.db.WISEFOOD_USER,
+                    POSTGRES_DB: pim.db.WISEFOOD_DB,
+                    POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
+                })
+                + container.withArgs(args=[
+                    "init-db",
+                ])  
+            ])
+            + job.spec.template.spec.withInitContainers([
+                podinit.wait4_postgresql("wait4-db", pim, config),
+                podinit.wait4_http("wait4-keycloak", "http://keycloak:9000/health/ready"),
+            ])
+            + job.spec.template.spec.withServiceAccountName("sysinit")
+            + job.spec.template.spec.withRestartPolicy("Never"),
+        
         authinitjob: job.new("auth-init-job")
             + job.metadata.withLabels({
                 'app.kubernetes.io/name': 'auth-init',
@@ -52,6 +78,11 @@ local volumeMount = k.core.v1.volumeMount;
                     MINIO_ROOT: 'root',
                     MINIO_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.minio.minio_root)+envSource.secretKeyRef.withKey("password"),
                     MC_INSECURE: std.toString(config.dns.SCHEME == "http"),
+
+                    SMTP_HOST: config.api.SMTP_SERVER,
+                    SMTP_PORT: config.api.SMTP_PORT,
+                    SMTP_USER: config.api.SMTP_USERNAME,
+                    SMTP_PASSWORD: envSource.secretKeyRef.withName(config.secrets.api.smtp_pass)+envSource.secretKeyRef.withKey("password"),
                 })
             ])
             + job.spec.template.spec.withInitContainers([
