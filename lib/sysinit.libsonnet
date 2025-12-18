@@ -36,6 +36,9 @@ local volumeMount = k.core.v1.volumeMount;
                     POSTGRES_USER: pim.db.WISEFOOD_USER,
                     POSTGRES_DB: pim.db.WISEFOOD_DB,
                     POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
+                    PG_ROOT_USER: pim.db.POSTGRES_USER,
+                    PG_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.postgres)+envSource.secretKeyRef.withKey("password"),
+                    KEYCLOAK_SCHEMA: pim.db.KEYCLOAK_SCHEMA,
                 })
                 + container.withArgs(args=[
                     "init-db",
