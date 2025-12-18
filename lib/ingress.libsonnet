@@ -43,7 +43,7 @@ local https_ingress_lets_encrypt(name, annotations, host, paths, tls_name) =
     ])
 ;
 
-local pim_tls_secret_name(pim) =  pim.namespace+'-tls';
+local tls_secret_name(pim, ingress_name) =  pim.namespace+'-'+ingress_name+'-tls';
 
 local transform_paths(paths) = [
     ingpath.withPath(p[0])
@@ -58,7 +58,7 @@ local ingress(pim, config, name, annotations, host, paths) =
     if (config.dns.SCHEME == 'http')
     then http_ingress(name, annotations, host, transform_paths(paths))
     else https_ingress_lets_encrypt(name, annotations, host, transform_paths(paths), 
-        pim_tls_secret_name(pim))
+        tls_secret_name(pim, name))
 ;
 
 {
