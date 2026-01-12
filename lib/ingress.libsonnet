@@ -74,7 +74,7 @@ local ingress(pim, config, name, annotations, host, paths) =
                 "nginx.ingress.kubernetes.io/proxy-set-headers": "Connection '';",
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$1",
             },
-            host = config.dns.MINIO_SUBDOMAIN+'.'+config.dns.ROOT_DOMAIN,
+            host = config.dns.MINIO_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
             paths = [
                 ["/console/?(.*)",        "ImplementationSpecific", "minio", "minio-minio"],
                 ["/", "Prefix", "minio", "minio-minapi"]
@@ -84,7 +84,7 @@ local ingress(pim, config, name, annotations, host, paths) =
         ingress_kc: ingress(pim, config,
             "kc",
             annotations = {},
-            host = config.dns.KEYCLOAK_SUBDOMAIN+'.'+config.dns.ROOT_DOMAIN,
+            host = config.dns.KEYCLOAK_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
             paths = [
                 ["/", "Prefix", "keycloak", "keycloak-kc"]
             ]
