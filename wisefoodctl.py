@@ -260,7 +260,10 @@ def generate_env_main(env_name, env_spec):
         provisioning_storage_class = "ebs-sc"
     elif env_spec["platform"] == "minikube" or "okeanos":
         dynamic_storage_class = "longhorn"
-        provisioning_storage_class = "csi-hostpath-sc"
+        if env_spec["platform"] == "minikube":
+            provisioning_storage_class = "csi-hostpath-sc"
+        else:
+            provisioning_storage_class = "longhorn"
     path = ENV_DIR / env_name / "main.jsonnet"
 
     jsonnet_content = textwrap.dedent(
