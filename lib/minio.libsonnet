@@ -24,8 +24,8 @@ local envSource = k.core.v1.envVarSource;
            + container.withEnvMap({
                 MINIO_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.minio.minio_root)+envSource.secretKeyRef.withKey("password"),
                 MINIO_ROOT_USER : 'root',
-                MINIO_BROWSER_REDIRECT_URL: config.dns.SCHEME+'://'+config.dns.MINIO_SUBDOMAIN+'.'+config.dns.ROOT_DOMAIN+'/console/',
-                MINIO_IDENTITY_OPENID_REDIRECT_URI: config.dns.SCHEME+'://'+config.dns.MINIO_SUBDOMAIN+'.'+config.dns.ROOT_DOMAIN+'/console/oauth_callback',
+                MINIO_BROWSER_REDIRECT_URL: config.dns.SCHEME+'://'+config.dns.MINIO_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1))+'/console/',
+                MINIO_IDENTITY_OPENID_REDIRECT_URI: config.dns.SCHEME+'://'+config.dns.MINIO_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1))+'/console/oauth_callback',
            })
            + container.withPorts([
                 containerPort.newNamed(pim.ports.MINIO, "minio"),

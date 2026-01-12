@@ -18,7 +18,7 @@ local secret = k.core.v1.secret;
 local podinit = import "podinit.libsonnet";
 local envSource = k.core.v1.envVarSource;
 
-local HOSTNAME(config) = config.dns.SCHEME+"://"+config.dns.KEYCLOAK_SUBDOMAIN+"."+config.dns.ROOT_DOMAIN;
+local HOSTNAME(config) = config.dns.SCHEME+"://"+config.dns.KEYCLOAK_SUBDOMAIN+"."+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1));
 
 local KEYCLOAK_CONFIG(pim,config) = {
     local db_url = "jdbc:postgresql://%(host)s:%(port)s/%(db)s" % { 
