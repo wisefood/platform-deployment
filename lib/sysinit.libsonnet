@@ -18,6 +18,7 @@ local service = k.core.v1.service;
 local secret = k.core.v1.secret;
 local envSource = k.core.v1.envVarSource;
 local volumeMount = k.core.v1.volumeMount;
+local dns = import "dns.libsonnet";
 
 {
     generate_manifest(pim,config): {
@@ -65,19 +66,19 @@ local volumeMount = k.core.v1.volumeMount;
                     KEYCLOAK_ADMIN_EMAIL: config.admin.email,
                     KEYCLOAK_REALM: pim.keycloak.REALM,
                     KEYCLOAK_PORT: std.toString(pim.ports.KEYCLOAK),
-                    KEYCLOAK_DOMAIN: config.dns.SCHEME + "://"+config.dns.KEYCLOAK_SUBDOMAIN+"."+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
+                    KEYCLOAK_DOMAIN: dns.kc_domain_scheme(config),
                     KUBE_NAMESPACE: pim.namespace,
                     KC_MINIO_CLIENT_ID: pim.keycloak.KC_MINIO_CLIENT_ID,
                     KC_PUBLIC_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PUBLIC_CLIENT_ID,
                     KC_PRIVATE_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,
 
-                    MINIO_REDIRECT: config.dns.SCHEME+"://"+config.dns.MINIO_SUBDOMAIN+"."+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1))+"/console/oauth_callback",
-                    PUBLIC_REDIRECT: config.dns.SCHEME+"://"+config.dns.ROOT_DOMAIN+"/*",
+                    MINIO_REDIRECT: dns.s3_domain_scheme(config)+"/console/oauth_callback",
+                    PUBLIC_REDIRECT: dns.root_domain_scheme(config)+"/*",
 
-                    MINIO_ORIGIN: config.dns.SCHEME+"://"+config.dns.MINIO_SUBDOMAIN+"."+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
-                    PUBLIC_ORIGIN: config.dns.SCHEME+"://"+config.dns.ROOT_DOMAIN,
+                    MINIO_ORIGIN: dns.s3_domain_scheme(config),
+                    PUBLIC_ORIGIN: dns.root_domain_scheme(config),
 
-                    MINIO_API_DOMAIN: config.dns.SCHEME+"://"+config.dns.MINIO_SUBDOMAIN+"."+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
+                    MINIO_API_DOMAIN: dns.s3_domain_scheme(config),
                     MINIO_ROOT: 'root',
                     MINIO_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.minio.minio_root)+envSource.secretKeyRef.withKey("password"),
                     MC_INSECURE: std.toString(config.dns.SCHEME == "http"),

@@ -17,6 +17,7 @@ local service = k.core.v1.service;
 local secret = k.core.v1.secret;
 local podinit = import "podinit.libsonnet";
 local envSource = k.core.v1.envVarSource;
+local dns = import "dns.libsonnet";
 
 {
     generate_manifest(pim,config): {
@@ -26,15 +27,15 @@ local envSource = k.core.v1.envVarSource;
             + container.withEnvMap({
                 PORT: std.toString(pim.ports.CATALOG),
                 CONTEXT_PATH: "/dc",
-                APP_EXT_DOMAIN: config.dns.SCHEME+'://'+config.dns.ROOT_DOMAIN,
+                APP_EXT_DOMAIN: dns.root_domain_scheme(config),
                 ELASTIC_HOST: "http://elastic:"+std.toString(pim.ports.ELASTIC),
                 ES_DIM: pim.catalog.ES_DIM,
                 MINIO_ENDPOINT: "http://minio:"+std.toString(pim.ports.MINIOAPI),
                 MINIO_BUCKET: pim.catalog.MINIO_BUCKET,
                 MINIO_ROOT: 'root',
                 MINIO_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.minio.minio_root)+envSource.secretKeyRef.withKey("password"),
-                MINIO_EXT_URL_CONSOLE: config.dns.SCHEME+'://'+config.dns.MINIO_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1))+'/console/',
-                MINIO_EXT_URL_API: config.dns.SCHEME+'://'+config.dns.MINIO_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1))+'/',
+                MINIO_EXT_URL_CONSOLE: dns.s3_domain_scheme(config)+'/console/',
+                MINIO_EXT_URL_API: dns.s3_domain_scheme(config)+'/',
                 KEYCLOAK_URL: "http://keycloak:"+std.toString(pim.ports.KEYCLOAK),
                 KEYCLOAK_REALM: pim.keycloak.REALM,
                 KEYCLOAK_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,

@@ -8,7 +8,7 @@ local ing = k.networking.v1.ingress;
 local ingrule = k.networking.v1.ingressRule;
 local ingpath = k.networking.v1.httpIngressPath;
 local ingtls = k.networking.v1.ingressTLS;
-
+local dns = import "dns.libsonnet";
 
 local standard_annotations =  {
     "nginx.ingress.kubernetes.io/proxy-connect-timeout": "60s",
@@ -74,7 +74,7 @@ local ingress(pim, config, name, annotations, host, paths) =
                 "nginx.ingress.kubernetes.io/proxy-set-headers": "Connection '';",
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$1",
             },
-            host = config.dns.MINIO_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
+            host = dns.s3_domain(config),
             paths = [
                 ["/console/?(.*)",        "ImplementationSpecific", "minio", "minio-minio"],
                 ["/", "Prefix", "minio", "minio-minapi"]
@@ -84,7 +84,7 @@ local ingress(pim, config, name, annotations, host, paths) =
         ingress_kc: ingress(pim, config,
             "kc",
             annotations = {},
-            host = config.dns.KEYCLOAK_SUBDOMAIN+'.'+std.join(".", std.slice(std.split(config.dns.ROOT_DOMAIN, "."), 1, std.length(std.split(config.dns.ROOT_DOMAIN, ".")), 1)),
+            host = dns.kc_domain(config),
             paths = [
                 ["/", "Prefix", "keycloak", "keycloak-kc"]
             ]
@@ -101,7 +101,7 @@ local ingress(pim, config, name, annotations, host, paths) =
                 "nginx.ingress.kubernetes.io/proxy-connect-timeout": "120s",
                 "nginx.ingress.kubernetes.io/proxy-read-timeout": "120s",
             },
-            host = config.dns.ROOT_DOMAIN, 
+            host = dns.root_domain(config), 
             paths = [
             ["/", "Prefix", "wisefood-ui", "ui-ui"], 
             ["/app(/|$)(.*)", "ImplementationSpecific", "wisefood-ui", "ui-ui"],
