@@ -242,6 +242,7 @@ secrets:
   - keycloak-db-pass: "##YOUR_PASSWORD_HERE##" # Password for PostgreSQL keycloak user 
   - smtp-pass: "##SMTP-PASSWORD##" # Password for SMTP server (mailing server)
   - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session encryptions
+  - groq-api-key: "##YOUR_GROQ_API_KEY_HERE##" # API key for GROQ LLM inference
     """
     with open(file_path, "w") as file:
         file.write(yaml_content)
@@ -326,14 +327,15 @@ def generate_env_main(env_name, env_spec):
                         wisefood_api: "kc-wisefood-api-secret",
                         minio: "kc-minio-client-secret",
                     }},
-                        api: {{
+                    api: {{
                         smtp_pass: "smtp-pass",
                         session_secret: "session-secret",
+                        groq_api_key: "groq-api-key",
                     }},
-                        minio: {{
+                    minio: {{
                         minio_root: "sysadmin-pass",
                     }},
-                        mongo: {{
+                    mongo: {{
                         mongo_root: "mongo-pass",
                     }},
                 }}

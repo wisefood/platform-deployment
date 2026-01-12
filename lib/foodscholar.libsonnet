@@ -25,7 +25,7 @@ local envSource = k.core.v1.envVarSource;
             container.new("fs", pim.images.FOODSCHOLAR)
             + container.withEnvMap({
                 PORT: std.toString(pim.ports.FOODSCHOLAR),
-                GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.foodscholar)+envSource.secretKeyRef.withKey("key"),
+                GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),
