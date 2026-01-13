@@ -26,6 +26,9 @@ local k = import 'k.libsonnet';
     
   s3_domain_scheme(config): 
     config.dns.SCHEME + '://' + $.s3_domain(config),
+
+  api_url_scheme(config):
+    config.dns.SCHEME + '://' + config.dns.ROOT_DOMAIN + '/dc/api',
 }
 // Example usage:
 // local dns = import 'dns.libsonnet';
