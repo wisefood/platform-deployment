@@ -243,6 +243,7 @@ secrets:
   - smtp-pass: "##SMTP-PASSWORD##" # Password for SMTP server (mailing server)
   - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session encryptions
   - groq-api-key: "##YOUR_GROQ_API_KEY_HERE##" # API key for GROQ LLM inference
+  - neo4j-pass: "##YOUR_NEO4J_PASSWORD_HERE##" # Password for Neo4j database
     """
     with open(file_path, "w") as file:
         file.write(yaml_content)
@@ -338,6 +339,9 @@ def generate_env_main(env_name, env_spec):
                     minio: {{
                         minio_root: "sysadmin-pass",
                     }},
+                    neo4j: {{
+                        neo4j_pass: "neo4j-pass",
+                    }},
                     mongo: {{
                         mongo_root: "mongo-pass",
                     }},
@@ -358,6 +362,10 @@ def generate_env_main(env_name, env_spec):
                         REDIS:"redis:7",
                         CATALOG: "wisefood/data-catalog:latest",
                         ELASTIC: "docker.elastic.co/elasticsearch/elasticsearch:8.14.3",
+                        UI: "wisefood/wisefood-ui:latest",
+                        FOODSCHOLAR: "wisefood/foodscholar:latest",
+                        CHROMA: "wisefood/chromadb:latest",
+                        NEO4J: "neo4j:5.22.0-community",
                     }},
                 }}
                 + defaults,
@@ -374,6 +382,10 @@ def generate_env_main(env_name, env_spec):
                 import 'redis.libsonnet',
                 import 'elastic.libsonnet',
                 import 'catalog.libsonnet',
+                import 'foodscholar.libsonnet',
+                import 'ui.libsonnet',
+                import 'chromadb.libsonnet',
+                import 'neo4j.libsonnet',
                 import 'keycloak.libsonnet',
                 import 'minio.libsonnet',
                 import 'ingress.libsonnet',
