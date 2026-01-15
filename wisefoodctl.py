@@ -365,7 +365,7 @@ def generate_env_main(env_name, env_spec):
                         UI: "wisefood/wisefood-ui:latest",
                         FOODSCHOLAR: "wisefood/foodscholar:latest",
                         CHROMA: "wisefood/chromadb:latest",
-                        NEO4J: "neo4j:5.22.0-community",
+                        NEO4J: "wisefood/neo4j:latest",
                     }},
                 }}
                 + defaults,
