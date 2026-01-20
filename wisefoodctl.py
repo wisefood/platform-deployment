@@ -329,10 +329,10 @@ def generate_env_main(env_name, env_spec):
                     keycloak: {{
                         sysadmin_pass: "sysadmin-pass",
                         wisefood_api: "kc-wisefood-api-secret",
-                        minio: "kc-minio-client-secret",
-                        foodscholar: "kc-foodscholar-client-secret",
-                        recipewrangler: "kc-recipewrangler-client-secret",
-                        foodchat: "kc-foodchat-client-secret",
+                        minio: "kc-minio-secret",
+                        foodscholar: "kc-foodscholar-secret",
+                        recipewrangler: "kc-recipewrangler-secret",
+                        foodchat: "kc-foodchat-secret",
                     }},
                     api: {{
                         smtp_pass: "smtp-pass",
