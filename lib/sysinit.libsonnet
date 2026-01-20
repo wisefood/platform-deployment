@@ -71,6 +71,9 @@ local dns = import "dns.libsonnet";
                     KC_MINIO_CLIENT_ID: pim.keycloak.KC_MINIO_CLIENT_ID,
                     KC_PUBLIC_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PUBLIC_CLIENT_ID,
                     KC_PRIVATE_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,
+                    KC_FOODSCHOLAR_CLIENT_ID: pim.keycloak.KC_FOODSCHOLAR_CLIENT_ID,
+                    KC_RECIPEWRANGLER_CLIENT_ID: pim.keycloak.KC_RECIPEWRANGLER_CLIENT_ID,
+                    KC_FOODCHAT_CLIENT_ID: pim.keycloak.KC_FOODCHAT_CLIENT_ID,
 
                     MINIO_REDIRECT: dns.s3_domain_scheme(config)+"/console/oauth_callback",
                     PUBLIC_REDIRECT: dns.root_domain_scheme(config)+"/*",
