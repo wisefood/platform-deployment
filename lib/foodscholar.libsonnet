@@ -27,7 +27,8 @@ local envSource = k.core.v1.envVarSource;
                 PORT: std.toString(pim.ports.FOODSCHOLAR),
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
                 CACHE_ENABLED: "false",
-                HOST: "0.0.0.0"
+                KEYCLOAK_CLIENT_ID: pim.keycloak.KC_FOODSCHOLAR_CLIENT_ID,
+                KEYCLOAK_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.foodscholar)+envSource.secretKeyRef.withKey("secret"),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),
