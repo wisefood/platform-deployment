@@ -37,6 +37,8 @@ local dns = import "dns.libsonnet";
                 MINIO_EXT_URL_CONSOLE: dns.s3_domain_scheme(config)+'/console/',
                 MINIO_EXT_URL_API: dns.s3_domain_scheme(config)+'/',
                 KEYCLOAK_URL: "http://keycloak:"+std.toString(pim.ports.KEYCLOAK),
+                KEYCLOAK_EXT_URL: dns.kc_domain_scheme(config),
+                KEYCLOAK_ISSUER_URL: dns.kc_domain_scheme(config)+"/realms/"+pim.keycloak.REALM,
                 KEYCLOAK_REALM: pim.keycloak.REALM,
                 KEYCLOAK_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,
                 KEYCLOAK_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.wisefood_api)+envSource.secretKeyRef.withKey("secret"),

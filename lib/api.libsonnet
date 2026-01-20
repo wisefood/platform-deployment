@@ -17,6 +17,7 @@ local service = k.core.v1.service;
 local secret = k.core.v1.secret;
 local podinit = import "podinit.libsonnet";
 local envSource = k.core.v1.envVarSource;
+local dns = import "dns.libsonnet";
 
 {
     generate_manifest(pim,config): {
@@ -40,6 +41,8 @@ local envSource = k.core.v1.envVarSource;
                 KEYCLOAK_REALM: pim.keycloak.REALM,
                 KEYCLOAK_CLIENT_ID: pim.keycloak.KC_WISEFOOD_PRIVATE_CLIENT_ID,
                 KEYCLOAK_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.wisefood_api)+envSource.secretKeyRef.withKey("secret"),
+                KEYCLOAK_EXT_URL: dns.kc_domain_scheme(config),
+                KEYCLOAK_ISSUER_URL: dns.kc_domain_scheme(config)+"/realms/"+pim.keycloak.REALM,
                 POSTGRES_HOST: pim.db.POSTGRES_HOST,
                 POSTGRES_PORT: std.toString(pim.ports.DB),
                 POSTGRES_USER: pim.db.WISEFOOD_USER,
