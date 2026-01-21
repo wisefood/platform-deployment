@@ -29,6 +29,11 @@ local envSource = k.core.v1.envVarSource;
                 CACHE_ENABLED: "false",
                 KEYCLOAK_CLIENT_ID: pim.keycloak.KC_FOODSCHOLAR_CLIENT_ID,
                 KEYCLOAK_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.foodscholar)+envSource.secretKeyRef.withKey("secret"),
+                ENABLE_BACKGROUND_WORKER: "true",
+                WORKER_BATCH_SIZE: "50",
+                WORKER_POLL_INTERVAL: "300",
+                REDIS_HOST: "redis",
+                REDIS_PORT: std.toString(pim.ports.REDIS),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),
