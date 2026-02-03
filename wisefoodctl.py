@@ -367,7 +367,7 @@ def generate_env_main(env_name, env_spec):
                         ELASTIC: "docker.elastic.co/elasticsearch/elasticsearch:8.14.3",
                         UI: "wisefood/wisefood-ui:latest",
                         FOODSCHOLAR: "wisefood/foodscholar:latest",
-                        RECIPEWRANGLER: "wisefood/recipewrangler:latest",
+                        RECIPEWRANGLER: "wisefood/recipe-wrangler:latest",
                         CHROMA: "wisefood/chromadb:latest",
                         NEO4J: "wisefood/neo4j:latest",
                     }},

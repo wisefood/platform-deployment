@@ -26,7 +26,7 @@ local envSource = k.core.v1.envVarSource;
         statefulset: stateful.new(name="neo4j", containers=[
             container.new("neo4j", pim.images.NEO4J)
             + container.withEnvMap({
-                NEO4J_AUTH: "none",
+                NEO4J_AUTH: envSource.secretKeyRef.withName(config.secrets.neo4j.neo4j_auth)+envSource.secretKeyRef.withKey("password"),
                 NEO4J_PLUGINS: '["apoc"]',
                 NEO4J_server_config_strict__validation_enabled: "false",
                 NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes",
