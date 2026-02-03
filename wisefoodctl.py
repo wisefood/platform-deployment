@@ -368,6 +368,7 @@ def generate_env_main(env_name, env_spec):
                         UI: "wisefood/wisefood-ui:latest",
                         FOODSCHOLAR: "wisefood/foodscholar:latest",
                         RECIPEWRANGLER: "wisefood/recipe-wrangler:latest",
+                        RECIPEWRANGLER_DB: "wisefood/postgres-rw:latest",
                         CHROMA: "wisefood/chromadb:latest",
                         NEO4J: "wisefood/neo4j:latest",
                     }},

@@ -27,6 +27,7 @@
     API: 8000,
     UI: 80,
     FOODSCHOLAR: 8001,
+    RECIPEWRANGLER: 8001
   },
   
 
