@@ -31,6 +31,7 @@ local dns = import "dns.libsonnet";
                 VITE_KEYCLOAK_REALM: pim.keycloak.REALM,
                 VITE_KEYCLOAK_CLIENT_ID: "wisefood-ui",
                 VITE_WISEFOOD_API_URL: dns.api_url_scheme(config),
+                CONTEXT_PATH: "/app",
                 SESSION_SECRET: envSource.secretKeyRef.withName(config.secrets.api.session_secret)+envSource.secretKeyRef.withKey("password"),
             })
         ],
