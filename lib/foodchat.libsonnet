@@ -23,20 +23,20 @@ local dns = import "dns.libsonnet";
     generate_manifest(pim,config): {
 
         deployment: deploy.new(name="foodchat", containers=[
-            container.new("fc", pim.images.foodchat)
+            container.new("fc", pim.images.FOODCHAT)
             + container.withEnvMap({
-                PORT: std.toString(pim.ports.foodchat),
+                PORT: std.toString(pim.ports.FOODCHAT),
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
                 WISEFOOD_CLIENT_ID: pim.keycloak.KC_FOODCHAT_CLIENT_ID,
                 WISEFOOD_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.foodchat)+envSource.secretKeyRef.withKey("secret"),
                 WISEFOOD_API_URL: dns.core_api_url_scheme(config),
                 CHROMA_MODE: "remote",
                 CHROMA_HOST: "chromadb",
-                CHROMA_PORT: pim.ports.CHROMA
+                CHROMA_PORT: std.toString(pim.ports.CHROMA)
 
             })
             + container.withPorts([
-                containerPort.newNamed(pim.ports.foodchat, "fc"),
+                containerPort.newNamed(pim.ports.FOODCHAT, "fc"),
             ]),
         ],
         podLabels={
