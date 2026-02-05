@@ -29,6 +29,9 @@ local k = import 'k.libsonnet';
 
   api_url_scheme(config):
     config.dns.SCHEME + '://' + config.dns.ROOT_DOMAIN + '/dc/api',
+  
+  core_api_url_scheme(config):
+    config.dns.SCHEME + "://" + config.dns.ROOT_DOMAIN + '/rest',
 }
 // Example usage:
 // local dns = import 'dns.libsonnet';
