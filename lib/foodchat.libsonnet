@@ -33,7 +33,6 @@ local dns = import "dns.libsonnet";
                 CHROMA_MODE: "remote",
                 CHROMA_HOST: "chromadb",
                 CHROMA_PORT: std.toString(pim.ports.CHROMA)
-
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODCHAT, "fc"),

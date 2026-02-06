@@ -28,7 +28,7 @@
     UI: 80,
     FOODSCHOLAR: 8001,
     RECIPEWRANGLER: 8001,
-    FOODCHAT: 8001
+    FOODCHAT: 8000
   },
   
 
