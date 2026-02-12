@@ -47,7 +47,11 @@ local envSource = k.core.v1.envVarSource;
         podLabels={
         'app.kubernetes.io/name': 'fs',
         'app.kubernetes.io/component': 'foodscholar',
-        }),
+        })
+        + deploy.spec.template.spec.withInitContainers([
+            podinit.wait4_postgresql("wait4-db", pim, config),
+            podinit.wait4_http("wait4-elastic", "http://elastic:"+std.toString(pim.ports.ELASTIC)+"/_cluster/health"),
+        ]),
 
         fs_svc: svcs.serviceFor(self.deployment),
     }
