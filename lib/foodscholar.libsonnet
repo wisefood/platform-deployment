@@ -34,6 +34,11 @@ local envSource = k.core.v1.envVarSource;
                 WORKER_POLL_INTERVAL: "300",
                 REDIS_HOST: "redis",
                 REDIS_PORT: std.toString(pim.ports.REDIS),
+                POSTGRES_HOST: pim.db.POSTGRES_HOST,
+                POSTGRES_PORT: std.toString(pim.ports.DB),
+                POSTGRES_USER: pim.db.WISEFOOD_USER,
+                POSTGRES_DB: pim.db.WISEFOOD_DB,
+                POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),

@@ -30,9 +30,14 @@ local dns = import "dns.libsonnet";
                 WISEFOOD_CLIENT_ID: pim.keycloak.KC_FOODCHAT_CLIENT_ID,
                 WISEFOOD_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.foodchat)+envSource.secretKeyRef.withKey("secret"),
                 WISEFOOD_API_URL: dns.core_api_url_scheme(config),
-                CHROMA_MODE: "remote",
+                CHROMA_MODE: "local",
                 CHROMA_HOST: "chromadb",
-                CHROMA_PORT: std.toString(pim.ports.CHROMA)
+                CHROMA_PORT: std.toString(pim.ports.CHROMA),
+                CSV_HUMMUS_PATH: "/app/src/data/data_kg.csv",
+                RECIPE_SOURCE: "api",
+                RECIPEWRANGLER_API_URL: "http://recipewrangler:8001",
+                NEO4J_URI: "bolt://neo4j:7687",
+                NEO4J_AUTH: envSource.secretKeyRef.withName(config.secrets.neo4j.neo4j_auth)+envSource.secretKeyRef.withKey("password"),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODCHAT, "fc"),
