@@ -16,8 +16,12 @@ local envSource = k.core.v1.envVarSource;
         pvc_elastic_storage: pvol.pvcWithDynamicStorage(
             "elastic-storage",
             "5Gi",
-            pim.dynamic_volume_storage_class,),
+            pim.dynamic_volume_storage_class,
+        ),
 
+        /*
+            Elastic Data Catalog Instance
+        */
         elastic_deployment: stateful.new(name="elastic", containers=[
             container.new("elastic",pim.images.ELASTIC)
            + container.withImagePullPolicy("Always")
@@ -46,6 +50,45 @@ local envSource = k.core.v1.envVarSource;
         + stateful.spec.template.spec.securityContext.withRunAsUser(1000)
         + stateful.spec.template.spec.securityContext.withRunAsNonRoot(true),
 
-       elastic_svc: svcs.headlessService.new("elastic", "elastic", pim.ports.ELASTIC)
+        elastic_svc: svcs.headlessService.new("elastic", "elastic", pim.ports.ELASTIC),
+
+        /*
+            Elastic RecipeWragler instance
+        */
+        pvc_es_rw_storage: pvol.pvcWithDynamicStorage(
+            "elastic-rw-storage",
+            "12Gi",
+            pim.dynamic_volume_storage_class,
+        ),
+
+        elastic_rw_deployment: stateful.new(name="elastic-rw", containers=[
+            container.new("elastic",pim.images.ELASTIC)
+           + container.withImagePullPolicy("Always")
+           + container.withEnvMap({
+                "discovery.type": "single-node",
+                ES_JAVA_OPTS: "-Xms1g -Xmx1g",
+                "xpack.security.enabled": "false",
+           })
+           + container.withPorts([
+                containerPort.newNamed(pim.ports.ELASTIC, "es"),
+           ])
+           + container.withVolumeMounts([
+                volumeMount.new("elastic-storage-vol","/usr/share/elasticsearch/data",false)
+           ])
+           + container.securityContext.withRunAsUser(1000)
+           + container.securityContext.withRunAsGroup(1000)
+        ],
+        podLabels={
+            'app.kubernetes.io/name': 'data-index',
+            'app.kubernetes.io/component': 'elastic',
+        })
+        + stateful.spec.template.spec.withVolumes([
+            vol.fromPersistentVolumeClaim("elastic-storage-vol","elastic-rw-storage")
+        ])
+        + stateful.spec.template.spec.securityContext.withFsGroup(1000)
+        + stateful.spec.template.spec.securityContext.withRunAsUser(1000)
+        + stateful.spec.template.spec.securityContext.withRunAsNonRoot(true),
+
+        elastic_rw_svc: svcs.headlessService.new("elastic-rw", "elastic-rw", pim.ports.ELASTIC),
     }
 }
