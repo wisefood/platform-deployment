@@ -72,11 +72,9 @@ local ingress(pim, config, name, annotations, host, paths) =
                 "nginx.ingress.kubernetes.io/proxy-chunked-transfer-encoding": "off",
                 "nginx.ingress.kubernetes.io/proxy-set-header": "Host $http_host; X-Real-IP $remote_addr; X-Forwarded-For $proxy_add_x_forwarded_for; X-Forwarded-Proto $scheme;",
                 "nginx.ingress.kubernetes.io/proxy-set-headers": "Connection '';",
-                "nginx.ingress.kubernetes.io/rewrite-target": "/$1",
             },
             host = dns.s3_domain(config),
             paths = [
-                ["/console/?(.*)",        "ImplementationSpecific", "minio", "minio-minio"],
                 ["/", "Prefix", "minio", "minio-minapi"]
             ]
         ),
