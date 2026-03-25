@@ -23,6 +23,24 @@ local dns = import "dns.libsonnet";
 {
     generate_manifest(pim,config): {
 
+        elasticinitjob: job.new("es-init-job")
+            + job.metadata.withLabels({
+                'app.kubernetes.io/name': 'es-init',
+                'app.kubernetes.io/component': 'esinit',
+            })
+            + job.spec.template.spec.withContainers(containers=[
+                container.new("es-init-container", pim.images.ELASTIC_INIT)
+                + container.withImagePullPolicy("Always")
+                + container.withEnvMap({
+                    ES_URL:"http://elastic:9200"
+                })
+            ])
+            + job.spec.template.spec.withInitContainers([
+                podinit.wait4_http("wait4-elastic", "http://elastic:9200/_cluster/health?wait_for_status=yellow&timeout=60s"),
+            ])
+            + job.spec.template.spec.withServiceAccountName("sysinit")
+            + job.spec.template.spec.withRestartPolicy("Never"),
+
         dbinitjob: job.new("db-init-job")
             + job.metadata.withLabels({
                 'app.kubernetes.io/name': 'db-init',

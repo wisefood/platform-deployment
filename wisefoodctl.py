@@ -367,6 +367,7 @@ def generate_env_main(env_name, env_spec):
                         REDIS:"redis:7",
                         CATALOG: "wisefood/data-catalog:latest",
                         ELASTIC: "docker.elastic.co/elasticsearch/elasticsearch:8.14.3",
+                        ELASTIC_INIT: "wisefood/elastic-init:latest",
                         UI: "wisefood/wisefood-ui:latest",
                         FOODSCHOLAR: "wisefood/foodscholar:latest",
                         RECIPEWRANGLER: "wisefood/recipe-wrangler:latest",
