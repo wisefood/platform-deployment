@@ -30,7 +30,8 @@ local envSource = k.core.v1.envVarSource;
                 NEO4J_URI: "bolt://neo4j:7687",
                 NEO4J_AUTH: envSource.secretKeyRef.withName(config.secrets.neo4j.neo4j_auth)+envSource.secretKeyRef.withKey("password"),
                 NUTRITION_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.postgres)+envSource.secretKeyRef.withKey("password"),          
-                NUTRITION_HOST: "db-rw",  
+                NUTRITION_HOST: "db-rw",
+                ELASTIC_URL: "http://elastic:"+std.toString(pim.ports.ELASTIC),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.RECIPEWRANGLER, "fs"),
@@ -56,7 +57,7 @@ local envSource = k.core.v1.envVarSource;
                 so we just use a subdirectory...
                 */
                 PGDATA: "/var/lib/postgresql/data/pgdata",
-                POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.postgres)+envSource.secretKeyRef.withKey("password"),          
+                POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.postgres)+envSource.secretKeyRef.withKey("password"),       
             })
             // Expose port 
             + container.withPorts([
