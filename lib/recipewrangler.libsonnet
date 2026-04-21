@@ -25,12 +25,21 @@ local envSource = k.core.v1.envVarSource;
             container.new("fs", pim.images.RECIPEWRANGLER)
             + container.withEnvMap({
                 CHROMA_HOST: "chromadb",
+                EMBED_MODEL_NAME: "BAAI/bge-small-en-v1.5",
+                EMBED_BATCH_SIZE: "256",
+		        EMBED_DEVICE: "cpu",
                 CHROMA_PORT: std.toString(pim.ports.CHROMA),
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
                 NEO4J_URI: "bolt://neo4j:7687",
                 NEO4J_AUTH: envSource.secretKeyRef.withName(config.secrets.neo4j.neo4j_auth)+envSource.secretKeyRef.withKey("password"),
+	            NUTRITION_DB: "nutrients",
+		        NUTRITION_USER: "postgres",
+                RECIPE_CACHE_ENABLED: "true",
+                REDIS_URL: "redis://redis:6379",
+                REDIS_RECIPE_DB: "7",
                 NUTRITION_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.postgres)+envSource.secretKeyRef.withKey("password"),          
                 NUTRITION_HOST: "db-rw",
+                NUTRITION_PROFILES_TABLE: "nutrients-recipe-profiles",
                 ELASTIC_URL: "http://elastic:"+std.toString(pim.ports.ELASTIC),
             })
             + container.withPorts([

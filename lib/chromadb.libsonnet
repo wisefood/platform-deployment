@@ -26,11 +26,16 @@ local initContainer = k.core.v1.container;
 
         statefulset: stateful.new(name="chromadb", containers=[
             container.new("chromadb", pim.images.CHROMA)
+            + container.withEnvMap({
+                CHROMA_SERVER_CORS_ALLOW_ORIGINS: '["*"]',
+                IS_PERSISTENT: "1",
+                PERSIST_DIRECTORY: "/chroma/chroma-data",
+            })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.CHROMA, "cdb"),
             ])
             + container.withVolumeMounts([
-                volumeMount.new("chromadb-vol", "/chroma", false),
+                volumeMount.new("chromadb-vol", "/chroma/chroma-data", false),
             ])
         ],
         podLabels={
@@ -44,10 +49,10 @@ local initContainer = k.core.v1.container;
             container.new("init-chroma", pim.images.CHROMA)
             + container.withCommand([
                 "sh", "-c",
-                "cp -a /chroma-init/. /chroma/"
+                "cp -a /chroma-init/. /chroma/chroma-data/"
             ])
             + container.withVolumeMounts([
-                volumeMount.new("chromadb-vol", "/chroma", false),
+                volumeMount.new("chromadb-vol", "/chroma/chroma-data", false),
             ])
         ]),
 
