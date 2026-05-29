@@ -11,10 +11,6 @@ local cmap = k.core.v1.configMap;
 local envSource = k.core.v1.envVarSource;
 
 {
-    // ----------------------------------------------------------------------
-    // Tunables: providers, prompt shaping, and quotas live here so adding or
-    // changing behavior is a one-line edit.
-    // ----------------------------------------------------------------------
     local apisix_image = "apache/apisix:3.14.1-debian",
 
     // Priority-based failover. ai-proxy-multi does NOT route by the request's
@@ -49,7 +45,6 @@ local envSource = k.core.v1.envVarSource;
     local token_quota = { limit: 100000, time_window: 60 },
     local request_quota = { count: 120, time_window: 60 },
 
-    // Build ai-proxy-multi instances from the providers data block.
     local proxy_instances = [
         {
             name: p.name,
