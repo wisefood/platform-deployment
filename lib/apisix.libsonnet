@@ -112,5 +112,33 @@ local envSource = k.core.v1.envVarSource;
                 "config.yaml": config_yaml,
                 "apisix.yaml": apisix_yaml,
             }),
+
+        deployment: deploy.new(name="ai-gateway", containers=[
+            container.new("apisix", apisix_image)
+            + container.withImagePullPolicy("IfNotPresent")
+            + container.withEnvMap({
+                GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key) + envSource.secretKeyRef.withKey("password"),
+                OPENAI_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.openai_key) + envSource.secretKeyRef.withKey("password"),
+            })
+            + container.withPorts([
+                containerPort.newNamed(pim.ports.APISIX, "gw"),
+            ])
+            + container.withVolumeMounts([
+                volumeMount.new("apisix-config", "/usr/local/apisix/conf/config.yaml", true)
+                + volumeMount.withSubPath("config.yaml"),
+                volumeMount.new("apisix-config", "/usr/local/apisix/conf/apisix.yaml", true)
+                + volumeMount.withSubPath("apisix.yaml"),
+            ])
+            + container.readinessProbe.tcpSocket.withPort(pim.ports.APISIX)
+            + container.readinessProbe.withInitialDelaySeconds(5)
+            + container.readinessProbe.withPeriodSeconds(10),
+        ],
+        podLabels={
+            'app.kubernetes.io/name': 'ai-gw',
+            'app.kubernetes.io/component': 'ai-gateway',
+        })
+        + deploy.spec.template.spec.withVolumes([
+            vol.fromConfigMap("apisix-config", "ai-gateway-config"),
+        ]),
     },
 }
