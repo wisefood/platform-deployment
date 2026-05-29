@@ -15,6 +15,21 @@ external provider (Groq primary, OpenAI fallback).
 It is **not** public-facing: it is reached only at the internal cluster DNS name
 `http://ai-gateway:9080`. It is therefore **not** added to `ingress.libsonnet`.
 
+## Steering model (corrected after verifying APISIX docs)
+
+APISIX's `ai-proxy-multi` does **not** route by the request's `model` field. Instance
+selection is purely load-balancing by `priority`/`weight`, and each instance forces its
+own configured `options.model` onto the upstream request. Therefore the gateway uses
+**priority-based failover with a single logical model**:
+
+- Groq is the **primary** (high priority) instance, pinned to a Groq model.
+- OpenAI is the **fallback** (lower priority) instance, pinned to an OpenAI model.
+- Apps send any OpenAI-compatible request; the gateway forces the model and
+  transparently fails over to OpenAI when Groq is unavailable or rate-limited.
+
+The app's `model` field is effectively ignored/overridden — apps stay fully
+provider-agnostic.
+
 ## Scope
 
 - In scope: the `apisix.libsonnet` file (declarative APISIX deployment + config), and the
@@ -77,31 +92,32 @@ The top of the lib defines a **data block** so adding a model/provider is a one-
 edit (consistent with how the other libs stay declarative):
 
 ```jsonnet
-local providers = {
-  groq: {
+local providers = [
+  {
+    name: "groq-primary",
+    provider: "openai-compatible",   // Groq exposes an OpenAI-compatible API
     endpoint: "https://api.groq.com/openai/v1/chat/completions",
     auth_env: "GROQ_API_KEY",
-    weight: 100,
+    model: "llama-3.3-70b-versatile",
+    weight: 1,
     priority: 1,          // primary
   },
-  openai: {
+  {
+    name: "openai-fallback",
+    provider: "openai",
     endpoint: "https://api.openai.com/v1/chat/completions",
     auth_env: "OPENAI_API_KEY",
-    weight: 0,
+    model: "gpt-4o-mini",
+    weight: 1,
     priority: 0,          // fallback
   },
-};
-
-// model name -> provider key (drives ai-proxy-multi model routing)
-local model_routing = {
-  "llama-3.3-70b-versatile": "groq",
-  "llama-3.1-8b-instant":    "groq",
-  "gpt-4o-mini":             "openai",
-};
+];
 ```
 
-The `ai-proxy-multi` instances are generated from `providers`; the route's model routing
-from `model_routing`.
+The `ai-proxy-multi` `instances` array is generated from `providers`. Higher `priority`
+wins; lower-priority instances serve as fallback when the primary fails or its token
+quota is exhausted (`fallback_strategy: [rate_limiting]`). Each instance pins its own
+`options.model`, so the request's model field is overridden.
 
 ## The `apisix.yaml` route
 
@@ -109,14 +125,14 @@ Single OpenAI-compatible route:
 
 - **Path/method:** `POST /v1/chat/completions`
 - **Plugin `ai-proxy-multi`:**
-  - **instances** for `groq` and `openai`, each with
-    `auth.header.Authorization: "Bearer $ENV://<auth_env>"` and the provider override
-    endpoint.
-  - **Provider steering & fallback:** instance `weight` + `priority` with passive health
-    checks, so OpenAI (priority 0, fallback) takes over when Groq (priority 1, primary)
-    fails. Groq carries all weight under normal operation.
-  - **Model-based routing:** request `model` field maps to the provider per
-    `model_routing`.
+  - **instances** for `groq-primary` and `openai-fallback`, each with
+    `auth.header.Authorization: "Bearer ${GROQ_API_KEY}"` style interpolation, an
+    `options.model`, and `override.endpoint`.
+  - **Provider steering & fallback:** `priority` selects the primary (Groq); the
+    lower-priority OpenAI instance takes over on failure / rate-limit exhaustion via
+    `fallback_strategy: [rate_limiting]` and the round-robin balancer.
+  - **No model-field routing** — see the "Steering model" section. Each instance forces
+    its own model.
 - **Plugin `ai-prompt-decorator`:** prepend a shared system message (default prompt
   defined in the data block, overridable).
 - **Plugin `ai-prompt-guard`:** regex deny rules on prompt content (default rules in the
@@ -134,8 +150,13 @@ easy to tune in one place.
   the OpenAI fallback instance.
 - Keys are only ever present as env vars at runtime; the rendered ConfigMap contains
   `$ENV://` placeholders, not secrets.
-- Standalone mode requires a pod restart to pick up `apisix.yaml` changes (acceptable —
-  config changes go through the normal manifest re-apply).
+- Standalone mode with `config_provider: yaml` polls `apisix.yaml` every second and
+  hot-reloads in memory — no pod restart needed for config changes. A re-apply of the
+  ConfigMap propagates to the mounted file and is picked up automatically.
+- The `apisix.yaml` MUST end with a literal `#END` line or APISIX will not load it.
+- Provider env interpolation in `apisix.yaml` uses APISIX's `$ENV://VAR` /
+  `"Bearer ${VAR}"`-style syntax; pin the APISIX image version in the plan since the
+  `ai-proxy-multi` schema changed across 3.x releases.
 
 ## Testing / verification
 
@@ -150,3 +171,5 @@ easy to tune in one place.
 
 1. OpenAI is the **live** fallback provider (confirmed).
 2. The lib is **written only**; not wired into `generate.libsonnet` (confirmed).
+3. Steering is **priority-based failover with a single logical model** (confirmed after
+   verifying `ai-proxy-multi` does not route by request `model` field).
