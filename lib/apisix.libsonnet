@@ -140,5 +140,7 @@ local envSource = k.core.v1.envVarSource;
         + deploy.spec.template.spec.withVolumes([
             vol.fromConfigMap("apisix-config", "ai-gateway-config"),
         ]),
+
+        svc: svcs.serviceFor(self.deployment),
     },
 }
