@@ -16,10 +16,19 @@ This is a deployment-manifest library, not application code with a unit-test har
 
 The render harness is a throwaway jsonnet file evaluated with the project's vendored libs. Confirm the jsonnet binary first.
 
-- [ ] **Step 0: Confirm tooling**
+- [ ] **Step 0: Tooling (already confirmed)**
 
-Run: `which jsonnet tk 2>/dev/null; ls vendor/`
-Expected: a jsonnet or `tk` (tanka) binary on PATH, and `vendor/` containing the k8s libs (`k.libsonnet` resolves). If neither binary exists, install go-jsonnet or use `tk eval`. Note which command renders jsonnet — referred to below as `RENDER` (e.g. `jsonnet -J lib -J vendor` or `tk eval`).
+The repo uses Tanka (`tk` at `/usr/local/bin/tk`) and `jb`. `lib/k.libsonnet` imports
+`github.com/jsonnet-libs/k8s-libsonnet/1.32/main.libsonnet` from `vendor/`. The render
+command **`RENDER`** used throughout this plan is:
+
+```
+tk eval --jpath lib --jpath vendor <file-or--e-expr>
+```
+
+If `tk eval` rejects a bare expression without an environment, fall back to go-jsonnet if
+present (`jsonnet -J lib -J vendor`). Confirm with:
+`tk eval --jpath lib --jpath vendor -e '(import "pim.libsonnet").ports.REDIS'` → `6379`.
 
 ---
 
@@ -77,7 +86,7 @@ local apisix = import "apisix.libsonnet";
 local pim = import "pim.libsonnet";
 local config = {
   namespace: "wisefood-dev",
-  secrets: { api: { groq_api_key: "groq-api-key", openai_api_key: "openai-api-key" } },
+  secrets: { api: { groq_api_key: "groq-api-key", openai_key: "openai-key" } },
 };
 local m = apisix.generate_manifest(pim, config);
 {
@@ -182,7 +191,7 @@ Run: `RENDER -J lib /tmp/render_apisix.jsonnet`
 Expected: FAIL on `has_deployment` / `cm_kind` access — but no import error. Specifically `m.configmap.kind` should evaluate to `"ConfigMap"`. The `has_deployment`/`has_svc` fields render `false`. This confirms the ConfigMap branch works before adding the rest.
 
 To check just the ConfigMap in isolation, run:
-`RENDER -J lib -e 'local a=import "apisix.libsonnet"; local p=import "pim.libsonnet"; a.generate_manifest(p, {namespace:"x",secrets:{api:{groq_api_key:"g",openai_api_key:"o"}}}).configmap.kind'`
+`RENDER -J lib -e 'local a=import "apisix.libsonnet"; local p=import "pim.libsonnet"; a.generate_manifest(p, {namespace:"x",secrets:{api:{groq_api_key:"g",openai_key:"o"}}}).configmap.kind'`
 Expected: `"ConfigMap"`
 
 - [ ] **Step 5: Commit**
@@ -283,7 +292,7 @@ local apisix = import "apisix.libsonnet";
 local pim = import "pim.libsonnet";
 local config = {
   namespace: "wisefood-dev",
-  secrets: { api: { groq_api_key: "groq-api-key", openai_api_key: "openai-api-key" } },
+  secrets: { api: { groq_api_key: "groq-api-key", openai_key: "openai-key" } },
 };
 local m = apisix.generate_manifest(pim, config);
 local ay = m.configmap.data["apisix.yaml"];
@@ -318,7 +327,7 @@ Expected:
 
 Run:
 ```bash
-RENDER -J lib -e 'local a=import "apisix.libsonnet"; local p=import "pim.libsonnet"; a.generate_manifest(p, {namespace:"x",secrets:{api:{groq_api_key:"g",openai_api_key:"o"}}}).configmap.data["apisix.yaml"]' | python3 -c 'import sys,yaml; t=sys.stdin.read().strip().strip("\"").encode().decode("unicode_escape"); docs=[d for d in yaml.safe_load_all(t.replace("#END","")) ]; print("routes:", len(docs[0]["routes"]))'
+RENDER -J lib -e 'local a=import "apisix.libsonnet"; local p=import "pim.libsonnet"; a.generate_manifest(p, {namespace:"x",secrets:{api:{groq_api_key:"g",openai_key:"o"}}}).configmap.data["apisix.yaml"]' | python3 -c 'import sys,yaml; t=sys.stdin.read().strip().strip("\"").encode().decode("unicode_escape"); docs=[d for d in yaml.safe_load_all(t.replace("#END","")) ]; print("routes:", len(docs[0]["routes"]))'
 ```
 Expected: `routes: 1` (no YAML parse exception). If the unicode-escape handling is awkward, instead pipe the rendered string to a file and run `yamllint`/`python3 -c 'import yaml,sys; yaml.safe_load(open(sys.argv[1]))'` on the de-quoted content.
 
@@ -346,7 +355,7 @@ Add after `configmap:` (note the trailing comma on `configmap`):
             + container.withImagePullPolicy("IfNotPresent")
             + container.withEnvMap({
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key) + envSource.secretKeyRef.withKey("password"),
-                OPENAI_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.openai_api_key) + envSource.secretKeyRef.withKey("password"),
+                OPENAI_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.openai_key) + envSource.secretKeyRef.withKey("password"),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.APISIX, "gw"),
@@ -439,7 +448,7 @@ And all Task 3/4 assertions still true.
 
 Run:
 ```bash
-RENDER -J lib -e 'local a=import "apisix.libsonnet"; local p=import "pim.libsonnet"; a.generate_manifest(p, {namespace:"wisefood-dev",secrets:{api:{groq_api_key:"groq-api-key",openai_api_key:"openai-api-key"}}})' | python3 -c 'import sys,json; m=json.load(sys.stdin); print(sorted(m.keys()))'
+RENDER -J lib -e 'local a=import "apisix.libsonnet"; local p=import "pim.libsonnet"; a.generate_manifest(p, {namespace:"wisefood-dev",secrets:{api:{groq_api_key:"groq-api-key",openai_key:"openai-key"}}})' | python3 -c 'import sys,json; m=json.load(sys.stdin); print(sorted(m.keys()))'
 ```
 Expected: `['configmap', 'deployment', 'svc']`
 
@@ -452,25 +461,35 @@ git commit -m "Add ai-gateway Service to APISIX gateway lib"
 
 ---
 
-## Task 6: Document the new OpenAI secret requirement
+## Task 6: Add the OpenAI key to example_config.yaml
 
 **Files:**
-- Modify: `example_config.yaml` (secrets block ~line 32-39)
+- Modify: `example_config.yaml` (secrets block)
 
-- [ ] **Step 1: Add the openai-api-key entry**
+Context (verified): `wisefoodctl.py` ALREADY maps `config.secrets.api.openai_key` →
+secret name `openai-key` (alongside `groq_api_key` → `groq-api-key`). The secret is
+created with a `password` key via `generate_secrets`. So **no `wisefoodctl.py` change is
+needed** — the lib's `config.secrets.api.openai_key` reference (Task 4) already resolves.
+The only gap is that `example_config.yaml` (the user-facing sample) does not list the
+`openai-key` secret, so operators don't know to supply it.
 
-In `example_config.yaml` under `secrets:`, add after `session-secret`:
+The current `example_config.yaml` secrets block ends at `session-secret` and does NOT
+yet include `groq-api-key` either (the live config in `wisefoodctl.py` is ahead of the
+sample). Add BOTH the groq and openai keys to keep the sample consistent with what the
+bootstrap expects.
+
+- [ ] **Step 1: Add the api-key entries**
+
+In `example_config.yaml` under `secrets:`, add after the `session-secret` line:
 
 ```yaml
   - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session management
-  - openai-api-key: "##YOUR_OPENAI_API_KEY##" # OpenAI API key used by the AI gateway fallback provider
+  - groq-api-key: "##YOUR_GROQ_API_KEY_HERE##" # Groq API key (primary LLM provider via AI gateway)
+  - openai-key: "##YOUR_OPENAI_API_KEY_HERE##" # OpenAI API key (AI gateway fallback provider)
 ```
 
-Note: the lib references `config.secrets.api.openai_api_key`; confirm the config→secrets
-mapping layer (the bootstrap script `wisefoodctl.py`) turns `openai-api-key` into a
-secret whose name is exposed at `config.secrets.api.openai_api_key` with a `password`
-key, mirroring how `groq-api-key` is handled. If the mapping is manual, add the same
-wiring there. (Groq's existing handling is the reference pattern.)
+(If `groq-api-key` is already present in the file when you open it, add only the
+`openai-key` line.)
 
 - [ ] **Step 2: Verify the file still parses as YAML**
 
@@ -481,7 +500,7 @@ Expected: `OK`
 
 ```bash
 git add example_config.yaml
-git commit -m "Document OpenAI API key secret for AI gateway fallback provider"
+git commit -m "Add Groq and OpenAI API key secrets to sample config for AI gateway"
 ```
 
 ---
