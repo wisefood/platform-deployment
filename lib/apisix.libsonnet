@@ -1,0 +1,71 @@
+
+local k = import "k.libsonnet";
+local svcs = import "services.libsonnet";
+
+local deploy = k.apps.v1.deployment;
+local container = k.core.v1.container;
+local containerPort = k.core.v1.containerPort;
+local volumeMount = k.core.v1.volumeMount;
+local vol = k.core.v1.volume;
+local cmap = k.core.v1.configMap;
+local envSource = k.core.v1.envVarSource;
+
+{
+    // ----------------------------------------------------------------------
+    // Tunables: providers, prompt shaping, and quotas live here so adding or
+    // changing behavior is a one-line edit.
+    // ----------------------------------------------------------------------
+    local apisix_image = "apache/apisix:3.14.1-debian",
+
+    // Priority-based failover. ai-proxy-multi does NOT route by the request's
+    // model field; each instance forces its own options.model. Higher priority
+    // wins; lower priority is the fallback when the primary fails / is rate-limited.
+    local providers = [
+        {
+            name: "groq-primary",
+            provider: "openai-compatible",
+            endpoint: "https://api.groq.com/openai/v1/chat/completions",
+            auth_env: "GROQ_API_KEY",
+            model: "llama-3.3-70b-versatile",
+            weight: 1,
+            priority: 1,
+        },
+        {
+            name: "openai-fallback",
+            provider: "openai",
+            endpoint: "https://api.openai.com/v1/chat/completions",
+            auth_env: "OPENAI_API_KEY",
+            model: "gpt-4o-mini",
+            weight: 1,
+            priority: 0,
+        },
+    ],
+
+    local prompt_decorator_prepend = [
+        { role: "system", content: "You are an assistant for the WiseFood platform. Be concise and factual." },
+    ],
+    local prompt_guard_deny = [],
+
+    local token_quota = { limit: 100000, time_window: 60 },
+    local request_quota = { count: 120, time_window: 60 },
+
+    local config_yaml = std.manifestYamlDoc({
+        deployment: {
+            role: "data_plane",
+            role_data_plane: { config_provider: "yaml" },
+        },
+        apisix: {
+            node_listen: 9080,
+            enable_admin: false,
+        },
+    }),
+
+    generate_manifest(pim, config): {
+
+        configmap: cmap.new("ai-gateway-config")
+            + cmap.withData({
+                "config.yaml": config_yaml,
+                "apisix.yaml": "",
+            }),
+    },
+}
