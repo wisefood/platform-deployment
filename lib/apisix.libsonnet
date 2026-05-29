@@ -61,10 +61,19 @@ local envSource = k.core.v1.envVarSource;
     local route_plugins =
         {
             "ai-proxy-multi": {
-                fallback_strategy: ["rate_limiting"],
+                // Fail over to the lower-priority instance on a real upstream
+                // failure (429/5xx) or when the primary's token quota below is
+                // exhausted. rate_limiting alone needs ai-rate-limiting to fire.
+                fallback_strategy: ["rate_limiting", "http_429", "http_5xx"],
                 balancer: { algorithm: "roundrobin" },
                 instances: proxy_instances,
                 logging: { summaries: true },
+            },
+            "ai-rate-limiting": {
+                instances: [
+                    { name: "groq-primary", limit: token_quota.limit, time_window: token_quota.time_window },
+                ],
+                rejected_code: 429,
             },
             "limit-count": {
                 count: request_quota.count,
