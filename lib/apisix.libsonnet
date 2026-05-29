@@ -49,6 +49,56 @@ local envSource = k.core.v1.envVarSource;
     local token_quota = { limit: 100000, time_window: 60 },
     local request_quota = { count: 120, time_window: 60 },
 
+    // Build ai-proxy-multi instances from the providers data block.
+    local proxy_instances = [
+        {
+            name: p.name,
+            provider: p.provider,
+            weight: p.weight,
+            priority: p.priority,
+            auth: { header: { Authorization: "Bearer $ENV://" + p.auth_env } },
+            options: { model: p.model },
+            override: { endpoint: p.endpoint },
+        }
+        for p in providers
+    ],
+
+    local route_plugins =
+        {
+            "ai-proxy-multi": {
+                fallback_strategy: ["rate_limiting"],
+                balancer: { algorithm: "roundrobin" },
+                instances: proxy_instances,
+                logging: { summaries: true },
+            },
+            "limit-count": {
+                count: request_quota.count,
+                time_window: request_quota.time_window,
+                key_type: "var",
+                key: "remote_addr",
+                rejected_code: 429,
+            },
+        }
+        + (if std.length(prompt_decorator_prepend) > 0
+           then { "ai-prompt-decorator": { prepend: prompt_decorator_prepend } }
+           else {})
+        + (if std.length(prompt_guard_deny) > 0
+           then { "ai-prompt-guard": { match_failure_response: "Request blocked by prompt guard.", deny_patterns: prompt_guard_deny } }
+           else {}),
+
+    // apisix.yaml MUST end with a literal "#END" line or APISIX won't load it.
+    local apisix_yaml =
+        std.manifestYamlDoc({
+            routes: [
+                {
+                    uri: "/v1/chat/completions",
+                    methods: ["POST"],
+                    plugins: route_plugins,
+                },
+            ],
+        })
+        + "\n#END\n",
+
     local config_yaml = std.manifestYamlDoc({
         deployment: {
             role: "data_plane",
@@ -65,7 +115,7 @@ local envSource = k.core.v1.envVarSource;
         configmap: cmap.new("ai-gateway-config")
             + cmap.withData({
                 "config.yaml": config_yaml,
-                "apisix.yaml": "",
+                "apisix.yaml": apisix_yaml,
             }),
     },
 }
