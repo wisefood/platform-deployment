@@ -35,7 +35,7 @@ pip install -r requirements.txt
 By running `python wisefoodctl.py --help`, the user is presented with the following options:
 
 ```bash
-usage: wisefoodctl.py [-h] {sample,init,validate,list,env,deps,install} ...
+usage: wisefoodctl.py [-h] {sample,init,validate,list,env,secrets,deps,install} ...
 
 Wisefood Deployment Control Tool
 
@@ -45,6 +45,7 @@ positional arguments:
     validate            Validate tools and repo structure
     list                List available Tanka environments
     env                 Build an environment based on an input YAML file
+    secrets             Generate and apply only the Kubernetes secrets from a config file
     deps                Manage Jsonnet/Helm chart dependencies
     install             Install tooling (requires sudo)
 
@@ -122,10 +123,26 @@ Before proceeding with the deployment, ensure you have the following prerequisit
       smtp: 
         [....]  # SMTP configuration for email services. Not required for local deployments
 
+    # Optional Docker registry credentials for pulling private component images.
+    # When username and password are provided, an image-pull secret named
+    # 'wisefood-regcred' is created and attached to the namespace's default
+    # ServiceAccount so every component pod inherits it. Leave as placeholders to
+    # skip (e.g. when all images are public).
+    images:
+      registry: "https://index.docker.io/v1/"  # Registry URL (default: Docker Hub)
+      username: "##YOUR_DOCKER_USERNAME_HERE##"
+      password: "##YOUR_DOCKER_PASSWORD_HERE##"
+      email: ""
+
     secrets:
         [....]  # Secrets for databases, services, and admin users
     ```
     **Fill in the configuration file with your specific settings, including secrets and service configurations. Make sure to replace placeholder values with secure and appropriate values for your deployment.**
+
+    Secret entries (and the `images` credentials) are **optional**: any value left
+    empty or still holding a `##...##` / `@@...@@` placeholder is skipped rather
+    than applied, so workloads that reference it via an optional `secretKeyRef`
+    start without it.
 
 5. **Build the Tanka Environment**: Use the filled configuration file to generate the Tanka environment.
     ```bash
@@ -134,6 +151,18 @@ Before proceeding with the deployment, ensure you have the following prerequisit
     This command will create a new Tanka environment in the `environments/wisefood.dev` directory (or whatever name you specified in the config file). The directory will contain two files:
     - `main.jsonnet`: The main Jsonnet file that includes the WiseFood platform configurations.
     - `spec.json`: The generated Kubernetes manifests ready for deployment.
+
+    Building the environment also generates and applies the Kubernetes secrets
+    (and, if provided, the `wisefood-regcred` image-pull secret). To (re)apply
+    **only** the secrets from a config file without rebuilding the environment —
+    for example after adding a new optional secret such as the Langfuse keys —
+    use the dedicated subcommand:
+    ```bash
+    python wisefoodctl.py secrets example_config.yaml
+    ```
+    Existing secrets are never overwritten (a warning is printed and they are
+    left as-is); only missing ones are created. To rotate an existing secret,
+    delete it first (`kubectl delete secret <name> -n <namespace>`) and re-run.
 
 6. **Deploy the WiseFood Platform**: Navigate to the newly created environment directory and apply the configuration to your Kubernetes cluster using Tanka.
     ```bash

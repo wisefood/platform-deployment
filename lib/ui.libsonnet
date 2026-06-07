@@ -31,6 +31,8 @@ local dns = import "dns.libsonnet";
                 VITE_KEYCLOAK_REALM: pim.keycloak.REALM,
                 VITE_KEYCLOAK_CLIENT_ID: "wisefood-ui",
                 VITE_WISEFOOD_API_URL: dns.api_url_scheme(config),
+                NUXT_PUBLIC_SENTRY_DSN: "https://62d87e6d48e1a80baeb888582f09a2ec@o4511264744472576.ingest.de.sentry.io/4511264746307665",
+                SENTRY_ENABLED: "true",
                 CONTEXT_PATH: "/app",
                 SESSION_SECRET: envSource.secretKeyRef.withName(config.secrets.api.session_secret)+envSource.secretKeyRef.withKey("password"),
             })
