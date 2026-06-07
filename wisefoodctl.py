@@ -154,6 +154,14 @@ def load_yaml(yaml_path: Path) -> dict:
         return yaml.safe_load(f)
 
 
+def is_secret_set(value) -> bool:
+    """True when a config value is a real secret, not empty or a placeholder
+    like "##...##" / "@@...@@"."""
+    if not value or not isinstance(value, str):
+        return False
+    return not (value.startswith(("##", "@@")) and value.endswith(("##", "@@")))
+
+
 def generate_random_string(length=40, chunk_size=8, separator="-"):
     characters = string.ascii_letters + string.digits
     raw_string = "".join(random.choices(characters, k=length))
@@ -199,6 +207,77 @@ def create_and_apply_k8s_secret(secret_name: str, namespace: str, data_dict: dic
             error(f"Failed to apply secret: {e}")
 
 
+REGCRED_NAME = "wisefood-regcred"
+DEFAULT_REGISTRY = "https://index.docker.io/v1/"
+
+
+def apply_regcred(env_spec: dict):
+    """Optionally create the Docker registry image-pull secret 'wisefood-regcred'
+    and attach it to the namespace's default ServiceAccount so every component
+    pod inherits it. No-op when no docker credentials are provided in the config."""
+    images = env_spec.get("images") or {}
+    username = images.get("username")
+    password = images.get("password")
+    # Optional: skip entirely when creds are missing or still placeholders.
+    if not is_secret_set(username) or not is_secret_set(password):
+        info("No Docker registry credentials provided; skipping image-pull secret.")
+        return
+
+    namespace = env_spec.get("namespace", "default")
+    registry = images.get("registry") or DEFAULT_REGISTRY
+    email = images.get("email", "")
+
+    auth = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("utf-8")
+    dockercfg = {
+        "auths": {
+            registry: {
+                "username": username,
+                "password": password,
+                "email": email,
+                "auth": auth,
+            }
+        }
+    }
+    encoded = base64.b64encode(json.dumps(dockercfg).encode("utf-8")).decode("utf-8")
+
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    secret = client.V1Secret(
+        api_version="v1",
+        kind="Secret",
+        metadata=client.V1ObjectMeta(name=REGCRED_NAME, namespace=namespace),
+        data={".dockerconfigjson": encoded},
+        type="kubernetes.io/dockerconfigjson",
+    )
+    try:
+        v1.create_namespaced_secret(namespace=namespace, body=secret)
+        info(f"Image-pull secret '{REGCRED_NAME}' applied successfully.")
+    except client.exceptions.ApiException as e:
+        if e.status == 409:
+            warning(
+                f"Image-pull secret '{REGCRED_NAME}' already exists in namespace '{namespace}'. Will not overwrite."
+            )
+        else:
+            error(f"Failed to apply image-pull secret: {e}")
+
+    # Attach to the default ServiceAccount so all pods inherit it.
+    try:
+        sa = v1.read_namespaced_service_account("default", namespace)
+        existing = [s.name for s in (sa.image_pull_secrets or [])]
+        if REGCRED_NAME in existing:
+            info(
+                f"Default ServiceAccount in '{namespace}' already references '{REGCRED_NAME}'."
+            )
+            return
+        body = {"imagePullSecrets": [{"name": n} for n in existing + [REGCRED_NAME]]}
+        v1.patch_namespaced_service_account("default", namespace, body)
+        info(
+            f"Attached '{REGCRED_NAME}' to default ServiceAccount in '{namespace}'."
+        )
+    except client.exceptions.ApiException as e:
+        error(f"Failed to attach image-pull secret to default ServiceAccount: {e}")
+
+
 def generate_sample_yaml(file_path="example_config.yaml"):
     """
     Generates a YAML configuration file with sample values and comprehensive comments.
@@ -230,10 +309,20 @@ dns:
     minio: "s3"  # MinIO subdomain
 
 config:
-  smtp: 
+  smtp:
     server: "@@YOUR_SMPT_SERVER_URL@@"  # SMTP server address
     port: "465"  # SMTP port (e.g., 465 for SSL, 587 for TLS)
     username: "@@YOUR_SMPT_SERVER_USERNAME@@"  # SMTP username for authentication
+
+# Optional Docker registry credentials for pulling private component images.
+# When provided, an image-pull secret named 'wisefood-regcred' is created and
+# attached to the namespace's default ServiceAccount. Leave as placeholders to
+# skip (e.g. for public images).
+images:
+  registry: "https://index.docker.io/v1/"  # Registry URL (default: Docker Hub)
+  username: "##YOUR_DOCKER_USERNAME_HERE##"  # Registry username
+  password: "##YOUR_DOCKER_PASSWORD_HERE##"  # Registry password or access token
+  email: ""  # Optional registry email
 
 secrets:
   - sysadmin-pass: "##YOUR_PASSWORD_HERE##" # Password for WiseFood Administrator user 
@@ -469,12 +558,33 @@ def generate_secrets(env_spec: dict):
     secrets = env_spec.get("secrets", {})
     for secret in secrets:
         for secret_name, secret_value in secret.items():
+            # Optional secrets: skip entries left empty or still holding a
+            # placeholder (e.g. "##...##" / "@@...@@"). Workloads referencing
+            # them must use an optional secretKeyRef so they start without it.
+            if not is_secret_set(secret_value):
+                warning(
+                    f"Secret '{secret_name}' has no value set; skipping (optional)."
+                )
+                continue
             create_and_apply_k8s_secret(
                 secret_name=secret_name,
                 namespace=namespace,
                 data_dict={"password": secret_value},
             )
+    # Optionally create the Docker registry image-pull secret and wire it into
+    # the default ServiceAccount.
+    apply_regcred(env_spec)
     info(f"Secrets for namespace '{namespace}' have been generated and applied.")
+
+
+def apply_secrets(config_yaml_path: str):
+    """Generate and apply only the Kubernetes secrets from a config file,
+    without (re)building the Tanka environment."""
+    try:
+        env_spec = load_yaml(config_yaml_path)
+    except Exception as e:
+        error(f"Could not parse deployment configuration file: {e}")
+    generate_secrets(env_spec)
 
 
 def create_env(config_yaml_path: str, force: bool = False):
@@ -619,6 +729,18 @@ def build_parser() -> argparse.ArgumentParser:
         func=lambda args: create_env(
             config_yaml_path=args.config_file, force=args.force
         )
+    )
+
+    # secrets only
+    p_secrets = sub.add_parser(
+        "secrets",
+        help="Generate and apply only the Kubernetes secrets from a config file",
+    )
+    p_secrets.add_argument(
+        "config_file", help="Path to deployment configuration file (.yaml or .yml)"
+    )
+    p_secrets.set_defaults(
+        func=lambda args: apply_secrets(config_yaml_path=args.config_file)
     )
 
     # deps
