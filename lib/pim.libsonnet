@@ -65,6 +65,14 @@
   api: {
     MINIO_BUCKET: 'system',
   },
+
+  ###########################
+  ## LANGFUSE  ##############
+  ###########################
+  langfuse: {
+    LANGFUSE_BASE_URL: "http://langfuse-web.langfuse.svc.cluster.local:3000",
+  },
+
   ###########################
   ## DATABASE  ##############
   ###########################

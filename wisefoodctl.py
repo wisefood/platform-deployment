@@ -244,6 +244,8 @@ secrets:
   - session-secret: "##YOUR_SESSION_KEY_HERE##" # Secret key for session encryptions
   - groq-api-key: "##YOUR_GROQ_API_KEY_HERE##" # API key for GROQ LLM inference
   - openai-key: "##YOUR_OPENAI_API_KEY_HERE##" # API key for OpenAI inference
+  - langfuse-public-key: "##YOUR_LANGFUSE_PUBLIC_KEY_HERE##" # Langfuse public key (optional, observability)
+  - langfuse-secret-key: "##YOUR_LANGFUSE_SECRET_KEY_HERE##" # Langfuse secret key (optional, observability)
   - neo4j-auth: "neo4j/<PASSWORD>" # Username and password for Neo4j database
     """
     with open(file_path, "w") as file:
@@ -339,7 +341,9 @@ def generate_env_main(env_name, env_spec):
                         smtp_pass: "smtp-pass",
                         session_secret: "session-secret",
                         groq_api_key: "groq-api-key",
-                        openai_key: "openai-key"
+                        openai_key: "openai-key",
+                        langfuse_public_key: "langfuse-public-key",
+                        langfuse_secret_key: "langfuse-secret-key"
                     }},
                     minio: {{
                         minio_root: "sysadmin-pass",

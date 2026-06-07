@@ -26,6 +26,9 @@ local envSource = k.core.v1.envVarSource;
             + container.withEnvMap({
                 PORT: std.toString(pim.ports.FOODSCHOLAR),
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
+                LANGFUSE_PUBLIC_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_public_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                LANGFUSE_SECRET_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_secret_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                LANGFUSE_BASE_URL: pim.langfuse.LANGFUSE_BASE_URL,
                 CACHE_ENABLED: "false",
                 KEYCLOAK_CLIENT_ID: pim.keycloak.KC_FOODSCHOLAR_CLIENT_ID,
                 KEYCLOAK_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.foodscholar)+envSource.secretKeyRef.withKey("secret"),
