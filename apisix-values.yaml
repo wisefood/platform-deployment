@@ -39,3 +39,20 @@ metrics:
     # Match kube-prometheus-stack's serviceMonitorSelector (release label).
     labels:
       release: kube-prometheus-stack
+
+# LLM provider API keys, injected as env vars so routes can reference them via
+# $ENV://GROQ_API_KEY / $ENV://OPENAI_API_KEY in the ai-proxy auth header.
+# (APISIX does NOT support Kubernetes as a secret manager — environment variables
+# are the supported mechanism, same as the standalone ai-gateway.) The secrets
+# groq-api-key/openai-key must exist in the apisix namespace.
+extraEnvVars:
+  - name: GROQ_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: groq-api-key
+        key: password
+  - name: OPENAI_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: openai-key
+        key: key

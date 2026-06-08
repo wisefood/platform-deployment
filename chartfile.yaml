@@ -6,4 +6,8 @@ repositories:
   url: https://grafana.github.io/helm-charts
 - name: elastic
   url: https://helm.elastic.cos
+- name: apisix
+  url: https://charts.apiseven.com
 requires:
+- chart: apisix/apisix
+  version: 2.14.1
