@@ -17,11 +17,32 @@
 // Routes (the multi-provider per-model classifier) are NOT defined here: the
 // traditional/etcd deployment takes route config via the Admin API, so routing
 // is applied as code by scripts/apisix-llm-routes.sh against the live Admin API.
+//
+// Custom plugin: lib/apisix-plugins/llm-router.lua is shipped as a ConfigMap and
+// registered via the chart's apisix.customPlugins. It selects an LLM provider
+// from the request's `model` field per route config and sets the upstream +
+// auth — the only way to do true model->provider routing on this APISIX version.
 local tanka = import "github.com/grafana/jsonnet-libs/tanka-util/main.libsonnet";
+local k = import "k.libsonnet";
+local cmap = k.core.v1.configMap;
+local defaultPlugins = import "apisix-default-plugins.libsonnet";
 local helm = tanka.helm.new(std.thisFile);
+
+// APISIX loads custom plugins from <luaPath base>/apisix/plugins/<name>.lua.
+local plugin_lua_path = "/wisefood-plugins/?.lua";
+local plugin_cm_name = "apisix-llm-router-plugin";
 
 {
     generate_manifest(pim, config): {
+        // ConfigMap holding the custom plugin Lua. The chart's customPlugins
+        // mounts it at apisix/plugins/llm-router.lua under the luaPath base.
+        plugin_cm:
+            cmap.new(plugin_cm_name)
+            + cmap.metadata.withNamespace("apisix")
+            + cmap.withData({
+                "llm-router.lua": importstr "apisix-plugins/llm-router.lua",
+            }),
+
         apisix:
             local rendered = helm.template("apisix", "../charts/apisix", {
                 namespace: "apisix",
@@ -32,6 +53,32 @@ local helm = tanka.helm.new(std.thisFile);
                             path: "/apisix/prometheus/metrics",
                             metricPrefix: "apisix_",
                             containerPort: 9091,
+                        },
+                        // The chart only registers customPlugins into the plugins
+                        // list when apisix.plugins is non-empty, so we set the full
+                        // default list explicitly; the chart appends llm-router.
+                        plugins: defaultPlugins,
+                        // Register and mount the custom llm-router plugin.
+                        customPlugins: {
+                            enabled: true,
+                            luaPath: plugin_lua_path,
+                            plugins: [
+                                {
+                                    name: "llm-router",
+                                    attrs: {},
+                                    configMap: {
+                                        name: plugin_cm_name,
+                                        // The chart uses `path` as the volumeMount
+                                        // mountPath and `key` as the subPath, so
+                                        // `path` must be the full FILE path (not the
+                                        // directory) for APISIX to find it under
+                                        // <luaPath base>/apisix/plugins/<name>.lua.
+                                        mounts: [
+                                            { key: "llm-router.lua", path: "/wisefood-plugins/apisix/plugins/llm-router.lua" },
+                                        ],
+                                    },
+                                },
+                            ],
                         },
                     },
                     metrics: {
