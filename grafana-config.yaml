@@ -1,0 +1,18 @@
+grafana:
+  grafana.ini:
+    server:
+      domain: monitor.wisefood.gr
+      root_url: https://monitor.wisefood.gr
+      serve_from_sub_path: true
+    security:
+      # Allow Grafana to be rendered inside an iframe (the APISIX dashboard's
+      # embedded Grafana panel). Without this Grafana sends
+      # X-Frame-Options: deny and the embed shows "This content is blocked".
+      allow_embedding: true
+      # SameSite=None (+ Secure, since we're on https) lets the Grafana session
+      # cookie be sent inside the cross-site iframe. Effect: if the viewer is
+      # already logged into Grafana in another tab, the embedded panel reuses
+      # that session and loads with no extra login; otherwise it prompts.
+      # No anonymous access is enabled.
+      cookie_samesite: none
+      cookie_secure: true

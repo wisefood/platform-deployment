@@ -1,0 +1,41 @@
+# Helm values for the Apache APISIX release in the `apisix` namespace.
+#
+# Chart: apisix/apisix 2.14.1 (apiseven.com). The release was originally
+# installed with chart defaults (no values). These values enable Prometheus
+# monitoring against the existing kube-prometheus-stack in `monitoring`.
+#
+# Apply with:
+#   helm upgrade apisix apisix/apisix --version 2.14.1 -n apisix -f apisix-values.yaml
+#
+# What this does:
+#  - apisix.prometheus.enabled: loads the prometheus plugin and starts the
+#    metrics exporter on 0.0.0.0:9091 at /apisix/prometheus/metrics. Also adds
+#    the `prometheus` (9091) containerPort to the pod and creates the
+#    `apisix-prometheus-metrics` Service.
+#  - metrics.serviceMonitor: creates a ServiceMonitor in the `apisix` namespace
+#    targeting that service. The `release: kube-prometheus-stack` label makes it
+#    match our Prometheus's serviceMonitorSelector. We deliberately do NOT set
+#    serviceMonitor.namespace — leaving it in `apisix` keeps the chart's
+#    namespaceSelector pointed at the namespace where the metrics Service lives.
+#    (Our Prometheus has serviceMonitorNamespaceSelector: {} so it matches all
+#    namespaces regardless.)
+#
+# NOTE: enabling the plugin exposes the endpoint, but APISIX only emits
+# per-request apisix_http_* metrics once the prometheus plugin is *activated*
+# globally. That activation is a global_rule applied via the Admin API — see
+# scripts/apisix-enable-prometheus.sh. Both pieces are required.
+
+apisix:
+  prometheus:
+    enabled: true
+    path: /apisix/prometheus/metrics
+    metricPrefix: apisix_
+    containerPort: 9091
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    # Match kube-prometheus-stack's serviceMonitorSelector (release label).
+    labels:
+      release: kube-prometheus-stack
