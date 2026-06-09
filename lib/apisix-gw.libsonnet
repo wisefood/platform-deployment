@@ -54,6 +54,13 @@ local plugin_cm_name = "apisix-llm-router-plugin";
                             metricPrefix: "apisix_",
                             containerPort: 9091,
                         },
+                        // $ENV:// resolution requires the env var names to be
+                        // DECLARED here (nginx.envs), not just set on the container
+                        // (extraEnvVars). Without this, $ENV://GROQ_API_KEY resolves
+                        // to empty and the gateway sends an empty bearer token.
+                        nginx: {
+                            envs: ["GROQ_API_KEY", "OPENAI_API_KEY"],
+                        },
                         // The chart only registers customPlugins into the plugins
                         // list when apisix.plugins is non-empty, so we set the full
                         // default list explicitly; the chart appends llm-router.

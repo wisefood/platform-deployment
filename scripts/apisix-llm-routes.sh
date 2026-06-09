@@ -52,6 +52,13 @@ return function(conf, ctx)
           or m:find("^gpt%-") or m:find("^o1%-") or m:find("^o3%-")) then
     return core.response.exit(400, {error = "no provider configured for model: " .. m})
   end
+  -- Inject the provider bearer token from the env var. ai-proxy/ai-proxy-multi
+  -- does NOT resolve $ENV:// in its auth header on this APISIX build, so the
+  -- key is read here (the function CAN read os.getenv) and set as a header,
+  -- with the instances carrying no auth of their own. The key stays in the k8s
+  -- secret / env var — never written to etcd or the route config.
+  local key = os.getenv("GROQ_API_KEY") or ""
+  core.request.set_header(ctx, "Authorization", "Bearer " .. key)
 end
 LUA
 
@@ -96,14 +103,18 @@ print(json.dumps({
       "rejected_msg": "LLM token quota exceeded, slow down."
     },
 
+    # Instances carry NO auth: the serverless-pre-function above sets the
+    # Authorization header from the env var (ai-proxy doesn't resolve $ENV://
+    # here). ai-proxy-multi requires an auth field, so we pass an empty header
+    # set that our pre-function's Authorization overrides.
     "ai-proxy-multi": {
       "balancer": {"algorithm": "roundrobin"},
       "instances": [
         {"name": "groq", "provider": "openai-compatible", "weight": 1,
-         "auth": {"header": {"Authorization": "Bearer $ENV://GROQ_API_KEY"}},
+         "auth": {"header": {}},
          "override": {"endpoint": "https://api.groq.com/openai/v1/chat/completions"}},
         {"name": "openai", "provider": "openai", "weight": 0,
-         "auth": {"header": {"Authorization": "Bearer $ENV://OPENAI_API_KEY"}}}
+         "auth": {"header": {}}}
       ]
     }
   }
