@@ -26,7 +26,12 @@ local tanka = import "github.com/grafana/jsonnet-libs/tanka-util/main.libsonnet"
 local k = import "k.libsonnet";
 local cmap = k.core.v1.configMap;
 local defaultPlugins = import "apisix-default-plugins.libsonnet";
-local helm = tanka.helm.new(std.thisFile);
+// tanka-util's helm.template rewrites every resource's managed-by label to
+// "Helmraiser" by default. The chart's ServiceMonitor selector matches on
+// managed-by: Helm, so that rewrite breaks Prometheus discovery of the metrics
+// service (selector no longer matches). Keep "Helm" so the selector matches.
+local helm = tanka.helm.new(std.thisFile)
+             + { defaultLabels: { "app.kubernetes.io/managed-by": "Helm" } };
 
 // APISIX loads custom plugins from <luaPath base>/apisix/plugins/<name>.lua.
 local plugin_lua_path = "/wisefood-plugins/?.lua";
@@ -94,6 +99,10 @@ local plugin_cm_name = "apisix-llm-router-plugin";
                     // exposed APISIX surface is the dashboard (via its ingress).
                     service: {
                         type: "ClusterIP",
+                        // The chart emits externalTrafficPolicy unconditionally,
+                        // but it's invalid on a ClusterIP service. Empty string
+                        // renders a null value, which K8s accepts as unset.
+                        externalTrafficPolicy: "",
                     },
                     metrics: {
                         serviceMonitor: {
