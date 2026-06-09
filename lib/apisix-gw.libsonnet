@@ -88,6 +88,13 @@ local plugin_cm_name = "apisix-llm-router-plugin";
                             ],
                         },
                     },
+                    // Gateway is internal-only: ClusterIP, not the chart's default
+                    // NodePort. Downstream apps reach it in-cluster at
+                    // apisix-gateway.apisix.svc.cluster.local. The only externally
+                    // exposed APISIX surface is the dashboard (via its ingress).
+                    service: {
+                        type: "ClusterIP",
+                    },
                     metrics: {
                         serviceMonitor: {
                             enabled: true,
