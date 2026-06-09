@@ -64,6 +64,37 @@ print(json.dumps({
   "plugins": {
     "serverless-pre-function": {"phase": "access", "functions": [os.environ["ADMIT_FN"]]},
     "prometheus": {},
+
+    # Gateway-enforced system prompt prepended to every request (ported from the
+    # old standalone ai-gateway design).
+    "ai-prompt-decorator": {
+      "prepend": [
+        {"role": "system",
+         "content": "You are an assistant for the WiseFood platform. Be concise and factual."}
+      ]
+    },
+
+    # Block obvious prompt-injection / jailbreak attempts before they reach the
+    # provider. Patterns are Lua patterns matched against message content.
+    # Tune deny_patterns to your policy; start conservative to avoid false positives.
+    "ai-prompt-guard": {
+      "match_all_roles": True,
+      "deny_patterns": [
+        "[Ii]gnore.*previous.*instructions",
+        "[Dd]isregard.*above",
+        "[Yy]ou are now.*DAN"
+      ]
+    },
+
+    # Token-based rate limit (ported from the old ai-gateway: 100k tokens / 60s).
+    # ai-rate-limiting counts LLM tokens, not just requests.
+    "ai-rate-limiting": {
+      "limit": 100000,
+      "time_window": 60,
+      "rejected_code": 429,
+      "rejected_msg": "LLM token quota exceeded, slow down."
+    },
+
     "ai-proxy-multi": {
       "balancer": {"algorithm": "roundrobin"},
       "instances": [
