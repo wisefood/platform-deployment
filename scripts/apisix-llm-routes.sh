@@ -61,6 +61,7 @@ print(json.dumps({
   "name": "llm-chat",
   "uri": "/v1/chat/completions",
   "methods": ["POST"],
+  "status": 1,
   "plugins": {
     "serverless-pre-function": {"phase": "access", "functions": [os.environ["ADMIT_FN"]]},
     "prometheus": {},
