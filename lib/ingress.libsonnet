@@ -88,7 +88,7 @@ local ingress(pim, config, name, annotations, host, paths) =
             ]
         ),
 
-        ingress: ingress(pim, config, 
+        ingress: ingress(pim, config,
             "wisefood",
             annotations = {
                 "nginx.ingress.kubernetes.io/x-forwarded-prefix": "/$1",
@@ -98,6 +98,11 @@ local ingress(pim, config, name, annotations, host, paths) =
                 "nginx.ingress.kubernetes.io/proxy-request-buffering": "off",
                 "nginx.ingress.kubernetes.io/proxy-connect-timeout": "120s",
                 "nginx.ingress.kubernetes.io/proxy-read-timeout": "120s",
+                // Per-client-IP rate limits (guest access makes the app
+                // reachable anonymously). limit-rps is averaged per second
+                // with a x5 burst allowance by default.
+                "nginx.ingress.kubernetes.io/limit-rps": "25",
+                "nginx.ingress.kubernetes.io/limit-connections": "40",
             },
             host = dns.root_domain(config), 
             paths = [

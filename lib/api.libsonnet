@@ -54,6 +54,9 @@ local dns = import "dns.libsonnet";
                 CACHE_ENABLED: "true",
                 REDIS_HOST: "redis",
                 REDIS_PORT: std.toString(pim.ports.REDIS),
+                GUEST_ENABLED: std.toString(pim.guest.ENABLED),
+                GUEST_TTL_SECONDS: std.toString(pim.guest.TTL_SECONDS),
+                GUEST_MAX_ACTIVE: std.toString(pim.guest.MAX_ACTIVE),
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.API, "api"),

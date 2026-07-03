@@ -67,6 +67,18 @@
   },
 
   ###########################
+  ## GUEST ACCESS  ##########
+  ###########################
+  # Ephemeral guest accounts minted by wisefood-api (realm role 'guest').
+  # TTL_SECONDS bounds a guest's lifetime; the API's reaper deletes the
+  # Keycloak user, household and chat sessions after expiry.
+  guest: {
+    ENABLED: true,
+    TTL_SECONDS: 24 * 3600,
+    MAX_ACTIVE: 200,
+  },
+
+  ###########################
   ## LANGFUSE  ##############
   ###########################
   langfuse: {
