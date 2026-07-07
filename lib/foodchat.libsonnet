@@ -31,6 +31,8 @@ local dns = import "dns.libsonnet";
                 WISEFOOD_CLIENT_SECRET: envSource.secretKeyRef.withName(config.secrets.keycloak.foodchat)+envSource.secretKeyRef.withKey("secret"),
                 WISEFOOD_API_URL: dns.core_api_url_scheme(config),
                 RECIPEWRANGLER_API_URL: "http://recipewrangler:8001",
+                // FoodScholar bridge (M1): nutrition-science answers in chat
+                FOODSCHOLAR_API_URL: "http://foodscholar:8001",
                 // Session store: SQLite file for now, swap to PostgreSQL later.
                 DATABASE_URL: "sqlite:///./foodchat.db",
             })
