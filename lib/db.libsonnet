@@ -43,6 +43,11 @@ local DB_CONFIG(pim) = {
     WISEFOOD_DB: pim.db.WISEFOOD_DB,
     WISEFOOD_USER: pim.db.WISEFOOD_USER,
     WISEFOOD_SCHEMA: pim.db.WISEFOOD_SCHEMA,
+
+    ########################################
+    ##  FOODCHAT SESSION STORE DB ##########
+    ########################################
+    FOODCHAT_DB: pim.db.FOODCHAT_DB,
 };
 
 

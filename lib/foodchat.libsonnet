@@ -33,8 +33,20 @@ local dns = import "dns.libsonnet";
                 RECIPEWRANGLER_API_URL: "http://recipewrangler:8001",
                 // FoodScholar bridge (M1): nutrition-science answers in chat
                 FOODSCHOLAR_API_URL: "http://foodscholar:8001",
-                // Session store: SQLite file for now, swap to PostgreSQL later.
-                DATABASE_URL: "sqlite:///./foodchat.db",
+                // Session store: dedicated 'foodchat' database on the platform Postgres.
+                // The app only reads DATABASE_URL, but the DB password lives in a k8s
+                // Secret and cannot be inlined here. We therefore rely on Kubernetes
+                // dependent env var expansion: withEnvMap renders env entries in
+                // alphabetical key order, so DATABASE_PASSWORD precedes DATABASE_URL
+                // in the env list and the kubelet substitutes $(DATABASE_PASSWORD)
+                // at container start. Do not rename these vars without preserving
+                // that ordering.
+                DATABASE_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
+                DATABASE_URL: "postgresql://"+pim.db.WISEFOOD_USER+":$(DATABASE_PASSWORD)@"+pim.db.POSTGRES_HOST+":"+std.toString(pim.ports.DB)+"/"+pim.db.FOODCHAT_DB,
+                // Langfuse tracing (same wiring as foodscholar.libsonnet)
+                LANGFUSE_PUBLIC_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_public_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                LANGFUSE_SECRET_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_secret_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                LANGFUSE_BASE_URL: pim.langfuse.LANGFUSE_BASE_URL,
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODCHAT, "fc"),
@@ -43,7 +55,10 @@ local dns = import "dns.libsonnet";
         podLabels={
         'app.kubernetes.io/name': 'fc',
         'app.kubernetes.io/component': 'foodchat',
-        }),
+        })
+        + deploy.spec.template.spec.withInitContainers([
+            podinit.wait4_postgresql("wait4-db", pim, config),
+        ]),
 
         fc_svc: svcs.serviceFor(self.deployment),
     }

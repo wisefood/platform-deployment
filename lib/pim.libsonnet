@@ -96,6 +96,8 @@
     WISEFOOD_DB: 'wisefood',
     WISEFOOD_USER: 'wisefood',
     WISEFOOD_SCHEMA: 'wisefood',
+    // Dedicated database for the FoodChat session store (owned by the wisefood user)
+    FOODCHAT_DB: 'foodchat',
     KEYCLOAK_USER: 'keycloak',
     KEYCLOAK_SCHEMA: 'keycloak',
   },
