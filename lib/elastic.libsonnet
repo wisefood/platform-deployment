@@ -27,9 +27,14 @@ local envSource = k.core.v1.envVarSource;
            + container.withImagePullPolicy("Always")
            + container.withEnvMap({
                 "discovery.type": "single-node",
-                ES_JAVA_OPTS: "-Xms1g -Xmx1g",
+                // 1g heap caused multi-second GC stalls on the corpus-scale
+                // recipes_v2 index (client read timeouts at 3s). ES guidance:
+                // heap <= 50% of container memory, hence the 4Gi limit below.
+                ES_JAVA_OPTS: "-Xms2g -Xmx2g",
                 "xpack.security.enabled": "false",
            })
+           + container.resources.withRequests({ cpu: "500m", memory: "3Gi" })
+           + container.resources.withLimits({ memory: "4Gi" })
            + container.withPorts([
                 containerPort.newNamed(pim.ports.ELASTIC, "es"),
            ])
