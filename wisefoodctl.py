@@ -390,8 +390,9 @@ def generate_env_main(env_name, env_spec):
                                 paths (confusing a MinIO path for a
                                 reverse proxy path) we choose to use
                                 separate subdomain for the MinIO API only
-                                (Note: MinIO CONSOLE is served by the
-                                PRIMARY subdomain. )
+                                (Note: MinIO CONSOLE is served by a
+                                dedicated host, hard-coded in
+                                lib/dns.libsonnet as s3.wisefood.gr. )
                     */
                     SCHEME: "{env_spec['dns']['scheme']}",
                     ROOT_DOMAIN: "{env_spec['dns']['domain']}",

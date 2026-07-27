@@ -34,7 +34,7 @@ local dns = import "dns.libsonnet";
                 MINIO_BUCKET: pim.catalog.MINIO_BUCKET,
                 MINIO_ROOT: 'root',
                 MINIO_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.minio.minio_root)+envSource.secretKeyRef.withKey("password"),
-                MINIO_EXT_URL_CONSOLE: dns.s3_domain_scheme(config)+'/console/',
+                MINIO_EXT_URL_CONSOLE: dns.s3_console_domain_scheme(config)+'/',
                 MINIO_EXT_URL_API: dns.s3_domain_scheme(config)+'/',
                 KEYCLOAK_URL: "http://keycloak:"+std.toString(pim.ports.KEYCLOAK),
                 KEYCLOAK_EXT_URL: dns.kc_domain_scheme(config),

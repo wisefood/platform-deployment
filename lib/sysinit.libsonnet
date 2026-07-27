@@ -93,10 +93,11 @@ local dns = import "dns.libsonnet";
                     KC_RECIPEWRANGLER_CLIENT_ID: pim.keycloak.KC_RECIPEWRANGLER_CLIENT_ID,
                     KC_FOODCHAT_CLIENT_ID: pim.keycloak.KC_FOODCHAT_CLIENT_ID,
 
-                    MINIO_REDIRECT: dns.s3_domain_scheme(config)+"/console/oauth_callback",
+                    MINIO_REDIRECT: dns.s3_console_domain_scheme(config)+"/oauth_callback",
                     PUBLIC_REDIRECT: dns.root_domain_scheme(config)+"/*",
 
-                    MINIO_ORIGIN: dns.s3_domain_scheme(config),
+                    // Browser origin of the MinIO console host.
+                    MINIO_ORIGIN: dns.s3_console_domain_scheme(config),
                     PUBLIC_ORIGIN: dns.root_domain_scheme(config),
 
                     MINIO_API_DOMAIN: dns.s3_domain_scheme(config),

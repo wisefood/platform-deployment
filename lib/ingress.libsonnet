@@ -54,17 +54,22 @@ local transform_paths(paths) = [
     for p in paths
 ];
 
-local ingress(pim, config, name, annotations, host, paths) = 
+// tls_name: override the derived TLS secret name. Used where an
+// ingress adopts a pre-existing certificate secret.
+local ingress(pim, config, name, annotations, host, paths, tls_name=null) =
     if (config.dns.SCHEME == 'http')
     then http_ingress(name, annotations, host, transform_paths(paths))
-    else https_ingress_lets_encrypt(name, annotations, host, transform_paths(paths), 
-        tls_secret_name(pim, name))
+    else https_ingress_lets_encrypt(name, annotations, host, transform_paths(paths),
+        if tls_name != null then tls_name else tls_secret_name(pim, name))
 ;
 
 {
     generate_manifest(pim, config): {
 
-        ingress_s3: ingress(pim, config, 
+        // S3 API only. The MinIO console lives on its own host
+        // (see ingress_s3_console) so that console routes can never
+        // be confused with bucket/object paths.
+        ingress_s3: ingress(pim, config,
             "s3",
             annotations = {
                 "nginx.ingress.kubernetes.io/proxy-body-size": "5120m",
@@ -77,6 +82,26 @@ local ingress(pim, config, name, annotations, host, paths) =
             paths = [
                 ["/", "Prefix", "minio", "minio-minapi"]
             ]
+        ),
+
+        // MinIO console, served at the root of a dedicated host.
+        ingress_s3_console: ingress(pim, config,
+            "minio-console",
+            annotations = {
+                "nginx.ingress.kubernetes.io/proxy-body-size": "5120m",
+                "nginx.ingress.kubernetes.io/proxy-http-version": "1.1",
+                "nginx.ingress.kubernetes.io/proxy-chunked-transfer-encoding": "off",
+                // The console keeps a websocket open for object/bucket events.
+                "nginx.ingress.kubernetes.io/proxy-read-timeout": "600",
+                "nginx.ingress.kubernetes.io/proxy-send-timeout": "600",
+            },
+            host = dns.s3_console_domain(config),
+            paths = [
+                ["/", "Prefix", "minio", "minio-minio"]
+            ],
+            // Keep the cert secret the pre-Tanka ingress already owns,
+            // so adopting it does not trigger a re-issue.
+            tls_name = "s3-wisefood-gr-tls"
         ),
 
         ingress_kc: ingress(pim, config,

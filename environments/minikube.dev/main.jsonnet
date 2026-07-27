@@ -27,8 +27,9 @@ local secrets = import 'secrets.libsonnet';
                   paths (confusing a MinIO path for a
                   reverse proxy path) we choose to use
                   separate subdomain for the MinIO API only
-                  (Note: MinIO CONSOLE is served by the
-                  PRIMARY subdomain. )
+                  (Note: MinIO CONSOLE is served by a
+                  dedicated host, hard-coded in
+                  lib/dns.libsonnet as s3.wisefood.gr. )
       */
       SCHEME: "http",
       ROOT_DOMAIN: "minikube",

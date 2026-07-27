@@ -16,7 +16,7 @@ local dns = import "dns.libsonnet";
     generate_manifest(pim, config):  {
         pvc_minio_storage: pvol.pvcWithDynamicStorage(
             "minio-storage",
-            "5Gi",
+            "12Gi",
             pim.dynamic_volume_storage_class,),
 
         minio_deployment: stateful.new(name="minio", containers=[
@@ -25,8 +25,10 @@ local dns = import "dns.libsonnet";
            + container.withEnvMap({
                 MINIO_ROOT_PASSWORD: envSource.secretKeyRef.withName(config.secrets.minio.minio_root)+envSource.secretKeyRef.withKey("password"),
                 MINIO_ROOT_USER : 'root',
-                MINIO_BROWSER_REDIRECT_URL: dns.s3_domain_scheme(config)+'/console/',
-                MINIO_IDENTITY_OPENID_REDIRECT_URI: dns.s3_domain_scheme(config)+'/console/oauth_callback',
+                // The console is served at the root of its own host; the
+                // s3_domain host serves the S3 API only.
+                MINIO_BROWSER_REDIRECT_URL: dns.s3_console_domain_scheme(config),
+                MINIO_IDENTITY_OPENID_REDIRECT_URI: dns.s3_console_domain_scheme(config)+'/oauth_callback',
            })
            + container.withPorts([
                 containerPort.newNamed(pim.ports.MINIO, "minio"),

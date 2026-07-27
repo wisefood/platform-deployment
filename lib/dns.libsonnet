@@ -18,14 +18,22 @@ local k = import 'k.libsonnet';
     then config.dns.MINIO_SUBDOMAIN + '.' + std.join('.', std.slice(parts, 1, std.length(parts), 1))
     else config.dns.MINIO_SUBDOMAIN + '.' + config.dns.ROOT_DOMAIN,
 
+  // The MinIO CONSOLE is served on its own, hard-coded host. The
+  // MINIO_SUBDOMAIN host (s3_domain, e.g. s3.wisefood-project.eu)
+  // serves the S3 API *only*.
+  s3_console_domain(config): 's3.wisefood.gr',
+
   root_domain_scheme(config):
     config.dns.SCHEME + '://' + config.dns.ROOT_DOMAIN,
 
   kc_domain_scheme(config):
     config.dns.SCHEME + '://' + $.kc_domain(config),
     
-  s3_domain_scheme(config): 
+  s3_domain_scheme(config):
     config.dns.SCHEME + '://' + $.s3_domain(config),
+
+  s3_console_domain_scheme(config):
+    config.dns.SCHEME + '://' + $.s3_console_domain(config),
 
   api_url_scheme(config):
     config.dns.SCHEME + '://' + config.dns.ROOT_DOMAIN + '/dc/api',
