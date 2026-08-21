@@ -15,7 +15,7 @@ local envSource = k.core.v1.envVarSource;
     generate_manifest(pim, config):  {
         pvc_elastic_storage: pvol.pvcWithDynamicStorage(
             "elastic-storage",
-            "5Gi",
+            "8Gi",
             pim.dynamic_volume_storage_class,
         ),
 

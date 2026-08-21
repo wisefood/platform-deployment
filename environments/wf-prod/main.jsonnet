@@ -71,7 +71,11 @@ local secrets = import 'secrets.libsonnet';
                 groq_api_key: "groq-api-key",
                 openai_key: "openai-key",
                 langfuse_public_key: "langfuse-public-key",
-                langfuse_secret_key: "langfuse-secret-key"
+                langfuse_secret_key: "langfuse-secret-key",
+                // Shared HMAC key: the gateway signs the member it authorized,
+                // FoodChat verifies the signature. Both read the same secret,
+                // and a mismatch rejects every FoodChat request.
+                foodchat_assertion: "foodchat-assertion-secret"
             },
             minio: {
                 minio_root: "sysadmin-pass",
@@ -103,9 +107,8 @@ local secrets = import 'secrets.libsonnet';
                 UI: "wisefood/wisefood-ui:latest",
                 FOODSCHOLAR: "wisefood/foodscholar:latest",
                 RECIPEWRANGLER: "wisefood/recipe-wrangler:latest",
-                RECIPEWRANGLER_DB: "wisefood/postgres-rw:latest",
+                RECIPEWRANGLER_DB: "wisefood/postgres-rw:patch",
                 FOODCHAT: "wisefood/foodchat:latest",
-                CHROMA: "wisefood/chromadb:latest",
                 NEO4J: "wisefood/neo4j:latest",
             },
         }
@@ -127,7 +130,6 @@ local secrets = import 'secrets.libsonnet';
         import 'recipewrangler.libsonnet',
         import 'foodchat.libsonnet',
         import 'ui.libsonnet',
-        import 'chromadb.libsonnet',
         import 'neo4j.libsonnet',
         import 'keycloak.libsonnet',
         import 'minio.libsonnet',

@@ -335,6 +335,7 @@ secrets:
   - openai-key: "##YOUR_OPENAI_API_KEY_HERE##" # API key for OpenAI inference
   - langfuse-public-key: "##YOUR_LANGFUSE_PUBLIC_KEY_HERE##" # Langfuse public key (optional, observability)
   - langfuse-secret-key: "##YOUR_LANGFUSE_SECRET_KEY_HERE##" # Langfuse secret key (optional, observability)
+  - foodchat-assertion-secret: "##YOUR_RANDOM_SECRET_HERE##" # Shared HMAC key: wisefood-api signs the member it authorized, foodchat verifies it. Same value on both; unset means foodchat trusts any member_id it is handed.
   - neo4j-auth: "neo4j/<PASSWORD>" # Username and password for Neo4j database
     """
     with open(file_path, "w") as file:
@@ -433,7 +434,8 @@ def generate_env_main(env_name, env_spec):
                         groq_api_key: "groq-api-key",
                         openai_key: "openai-key",
                         langfuse_public_key: "langfuse-public-key",
-                        langfuse_secret_key: "langfuse-secret-key"
+                        langfuse_secret_key: "langfuse-secret-key",
+                        foodchat_assertion: "foodchat-assertion-secret"
                     }},
                     minio: {{
                         minio_root: "sysadmin-pass",

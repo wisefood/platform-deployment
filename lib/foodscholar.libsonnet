@@ -43,6 +43,30 @@ local envSource = k.core.v1.envVarSource;
                 POSTGRES_USER: pim.db.WISEFOOD_USER,
                 POSTGRES_DB: pim.db.WISEFOOD_DB,
                 POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
+                   // Models. Every model the app talks to is named here; nothing
+                // is hardcoded in the image. Groq shut down both Llama ids on
+                // 2026-08-16, so all Groq-backed roles run reasoning models
+                // and rely on backend/model_profiles.py to hide reasoning and
+                // floor the token budget.
+                QA_DEFAULT_MODEL: "openai/gpt-oss-120b",
+                // Also the API contract: advertised by GET /qa/models and
+                // enforced on advanced-mode requests. QA_DEFAULT_MODEL must
+                // appear in it, or the app refuses to start.
+                QA_AVAILABLE_MODELS: std.join(",", [
+                    "openai/gpt-oss-120b",
+                    "openai/gpt-oss-20b",
+                ]),
+                QA_FAST_MODEL: "openai/gpt-oss-20b",
+                QA_UTILITY_MODEL: "openai/gpt-oss-20b",
+                SESSION_TITLE_MODEL: "openai/gpt-oss-20b",
+                SESSION_CHAT_MODEL: "openai/gpt-oss-120b",
+                SYNTHESIS_MODEL: "openai/gpt-oss-120b",
+                MEMORY_EXTRACTOR_MODEL: "openai/gpt-oss-20b",
+                ENRICHMENT_KEYWORD_MODEL: "openai/gpt-oss-20b",
+                ENRICHMENT_ANNOTATION_MODEL: "openai/gpt-oss-20b",
+                GUIDELINE_ENRICHMENT_MODEL: "openai/gpt-oss-20b",
+                // OpenAI, not Groq: vision over rendered PDF pages.
+                GUIDELINE_EXTRACTION_MODEL: "gpt-5.4",
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),

@@ -34,6 +34,18 @@ local dns = import "dns.libsonnet";
                 LANGFUSE_BASE_URL: pim.langfuse.LANGFUSE_BASE_URL,
                 LANGFUSE_PUBLIC_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_public_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 LANGFUSE_SECRET_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_secret_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                // The signed member assertion shared with foodchat.
+                //
+                // This gateway is the only party that can answer "does this
+                // Keycloak user own this member" — the household tables are
+                // here — so it signs that answer into an X-WiseFood-Member
+                // header and FoodChat verifies the signature. FoodChat is
+                // otherwise internally unauthenticated and believes whatever
+                // member_id it is handed.
+                //
+                // MUST be the same value as in lib/foodchat.libsonnet: a
+                // mismatch makes FoodChat reject every request this sends.
+                FOODCHAT_ASSERTION_SECRET: envSource.secretKeyRef.withName(config.secrets.api.foodchat_assertion)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 MINIO_ENDPOINT: "http://minio:"+std.toString(pim.ports.MINIOAPI),
                 MINIO_BUCKET: pim.api.MINIO_BUCKET,
                 MINIO_ROOT: 'root',
