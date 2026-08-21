@@ -117,7 +117,41 @@ local dns = import "dns.libsonnet";
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODCHAT, "fc"),
-            ]),
+            ])
+            // Liveness: is the process answering at all.
+            //
+            // Points at /health, which is deliberately shallow — a liveness
+            // probe wired to a dependency check restarts a pod that is working
+            // fine, and restarting it does not bring the dependency back. The
+            // generous failureThreshold is because a planning turn can occupy a
+            // worker for a while; three missed checks in a row means wedged,
+            // one means busy.
+            + container.livenessProbe.httpGet.withPath("/foodchat/health")
+            + container.livenessProbe.httpGet.withPort(pim.ports.FOODCHAT)
+            + container.livenessProbe.withInitialDelaySeconds(20)
+            + container.livenessProbe.withPeriodSeconds(15)
+            + container.livenessProbe.withTimeoutSeconds(5)
+            + container.livenessProbe.withFailureThreshold(3)
+            // Readiness: can it actually serve.
+            //
+            // /ready checks the database and the orchestrator — the two things
+            // without which every session route 500s — and merely REPORTS the
+            // optional dependencies, so a RecipeWrangler blip does not pull the
+            // whole chat out of the load balancer. Boot runs migrations and
+            // builds four services, hence the initial delay.
+            + container.readinessProbe.httpGet.withPath("/foodchat/ready")
+            + container.readinessProbe.httpGet.withPort(pim.ports.FOODCHAT)
+            + container.readinessProbe.withInitialDelaySeconds(10)
+            + container.readinessProbe.withPeriodSeconds(10)
+            + container.readinessProbe.withTimeoutSeconds(5)
+            + container.readinessProbe.withFailureThreshold(3)
+            // Requests are what the scheduler packs against; limits are the
+            // ceiling. Memory is the binding one — the process holds a session
+            // cache and a pool of model clients — and CPU is deliberately
+            // burstable, because a planning turn is mostly waiting on Groq and
+            // RecipeWrangler rather than computing.
+            + container.resources.withRequests({ cpu: "100m", memory: "512Mi" })
+            + container.resources.withLimits({ memory: "1Gi" }),
         ],
         podLabels={
         'app.kubernetes.io/name': 'fc',
