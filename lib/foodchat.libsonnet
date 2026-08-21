@@ -81,6 +81,20 @@ local dns = import "dns.libsonnet";
                 // grader, whose response scales with FOODCHAT_MAX_PLANS_TO_SCORE.
                 GROQ_DEFAULT_MAX_TOKENS: "4096",
                 // CRITICAL|ERROR|WARNING|INFO|DEBUG; anything else falls back to
+                // The data catalog, for dietary guidelines.
+                //
+                // Unset, FoodChat grades every plan against three hardcoded
+                // rules — real guidance, and identical for a member in Ireland,
+                // Slovenia, Hungary or Greece. Set, it reads the member's own:
+                // the catalog holds ~2,700 rules faceted by region, life stage
+                // and health condition.
+                //
+                // The gateway does NOT proxy the catalog's guideline routes, so
+                // this is a direct in-cluster call authenticated with the same
+                // Keycloak client pair FoodChat already uses for profiles.
+                // Unreachable or slow degrades to the hardcoded three; it never
+                // fails a plan.
+                DATA_API_URL: "http://data-catalog:"+std.toString(pim.ports.CATALOG),
                 // The signed member assertion shared with wisefood-api.
                 //
                 // FoodChat takes `member_id` as DATA and believes it; only the
