@@ -79,6 +79,50 @@
   },
 
   ###########################
+  ## OBSERVABILITY  #########
+  ###########################
+  # Cross-cutting switches, injected into every service.
+  #
+  # LOG_FORMAT: 'json' emits one object per line and preserves the extra=...
+  # fields the text formatters silently drop; 'text' keeps the human-readable
+  # stdout. Every service also stamps the request's correlation id
+  # (X-Request-Id, assigned by the gateway and forwarded on every proxied call)
+  # onto each line, in both formats — that is not optional and has no flag.
+  #
+  # ANALYTICS_ENABLED: the platform-wide switch for *recording user activity*.
+  # Off means no activity events are stored and the ingest endpoints accept and
+  # discard. Correlation ids and structured logs are not analytics and are
+  # unaffected. Leave false until the analytics schema is applied and the
+  # consent copy is live.
+  observability: {
+    LOG_FORMAT: 'json',
+    ANALYTICS_ENABLED: true,
+    // How silence is read for a user who has never answered the analytics
+    // question. 'opt_in' records their activity without their identity;
+    // 'opt_out' attributes it until they say otherwise. Left at the
+    // conservative reading until the project decides — see section 7 of
+    // ANALYTICS_AUDIT_AND_PLAN.md.
+    ANALYTICS_CONSENT_MODE: 'opt_in',
+    // Keep the platform Postgres from filling with events. Applied by a
+    // retention job, not by the database.
+    ANALYTICS_RETENTION_DAYS: 365,
+    // Where services report activity, and where they read the platform
+    // switches. The flags URL is derived from this one by the client, so the
+    // two cannot drift.
+    ANALYTICS_INGEST_URL: 'http://wisefood-api:' + std.toString($.ports.API) + '/rest/api/v1/analytics/internal/events',
+    // What to call this deploy. Stamped on every error and every browser
+    // session, so a failure can be tied to the release that introduced it and
+    // a group that stops appearing after a bump is visibly fixed.
+    //
+    // Every image is tagged :latest, so there is no tag to read this from —
+    // it has to be set here and bumped when you roll. A stale value is worse
+    // than none: it attributes a new fault to an old release. If you would
+    // rather not maintain it, set it to '' and the column stays NULL, which
+    // costs only the regression view.
+    WISEFOOD_RELEASE: '2026-09-04',
+  },
+
+  ###########################
   ## LANGFUSE  ##############
   ###########################
   langfuse: {

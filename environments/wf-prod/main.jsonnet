@@ -75,7 +75,8 @@ local secrets = import 'secrets.libsonnet';
                 // Shared HMAC key: the gateway signs the member it authorized,
                 // FoodChat verifies the signature. Both read the same secret,
                 // and a mismatch rejects every FoodChat request.
-                foodchat_assertion: "foodchat-assertion-secret"
+                foodchat_assertion: "foodchat-assertion-secret",
+                analytics_ingest: "analytics-ingest-secret"
             },
             minio: {
                 minio_root: "sysadmin-pass",

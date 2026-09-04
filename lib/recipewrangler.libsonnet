@@ -24,6 +24,12 @@ local envSource = k.core.v1.envVarSource;
         deployment: deploy.new(name="recipewrangler", containers=[
             container.new("fs", pim.images.RECIPEWRANGLER)
             + container.withEnvMap({
+                LOG_FORMAT: pim.observability.LOG_FORMAT,
+                ANALYTICS_ENABLED: std.toString(pim.observability.ANALYTICS_ENABLED),
+                ANALYTICS_INGEST_URL: pim.observability.ANALYTICS_INGEST_URL,
+                // Shared with the gateway. Unset closes the ingest endpoint and
+                // leaves this service reporting nothing — off, never open.
+                ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 CHROMA_HOST: "chromadb",
                 EMBED_MODEL_NAME: "BAAI/bge-small-en-v1.5",
                 EMBED_BATCH_SIZE: "256",

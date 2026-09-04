@@ -25,6 +25,16 @@ local dns = import "dns.libsonnet";
         deployment: deploy.new(name="wisefood-api", containers=[
             container.new("api", pim.images.API)
             + container.withEnvMap({
+                LOG_FORMAT: pim.observability.LOG_FORMAT,
+                ANALYTICS_ENABLED: std.toString(pim.observability.ANALYTICS_ENABLED),
+                ANALYTICS_CONSENT_MODE: pim.observability.ANALYTICS_CONSENT_MODE,
+                ANALYTICS_RETENTION_DAYS: std.toString(pim.observability.ANALYTICS_RETENTION_DAYS),
+                // Shared with the platform services that report activity they
+                // observed themselves (a search RecipeWrangler ran, tokens
+                // FoodChat spent). Unset closes the internal ingest endpoint
+                // rather than opening it — same rule as the member assertion.
+                WISEFOOD_RELEASE: pim.observability.WISEFOOD_RELEASE,
+                ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.API),
                 CONTEXT_PATH: "/rest",
                 APP_EXT_DOMAIN: config.dns.SCHEME+'://'+config.dns.ROOT_DOMAIN,
@@ -85,6 +95,45 @@ local dns = import "dns.libsonnet";
         ]),
 
         dc_svc: svcs.serviceFor(self.deployment),
+
+        // Ages activity data out. Runs nightly on the same image as the API,
+        // so it shares the connection settings and the schema it is pruning.
+        // Feedback is never deleted by it — somebody wrote that on purpose and
+        // an expert may not have read it yet.
+        analytics_retention: {
+            apiVersion: "batch/v1",
+            kind: "CronJob",
+            metadata: { name: "analytics-retention" },
+            spec: {
+                schedule: "17 3 * * *",
+                concurrencyPolicy: "Forbid",
+                successfulJobsHistoryLimit: 3,
+                failedJobsHistoryLimit: 3,
+                jobTemplate: { spec: {
+                    // A prune that cannot finish should stop and be noticed,
+                    // not retry against a table it is already struggling with.
+                    backoffLimit: 1,
+                    activeDeadlineSeconds: 3600,
+                    template: { spec: {
+                        restartPolicy: "Never",
+                        containers: [
+                            container.new("retention", pim.images.API)
+                            // Absolute: the image's WORKDIR is /app/src, not /app.
+                            + container.withCommand(["python", "/app/scripts/apply_analytics_retention.py"])
+                            + container.withEnvMap({
+                                LOG_FORMAT: pim.observability.LOG_FORMAT,
+                                ANALYTICS_RETENTION_DAYS: std.toString(pim.observability.ANALYTICS_RETENTION_DAYS),
+                                POSTGRES_HOST: pim.db.POSTGRES_HOST,
+                                POSTGRES_PORT: std.toString(pim.ports.DB),
+                                POSTGRES_USER: pim.db.WISEFOOD_USER,
+                                POSTGRES_DB: pim.db.WISEFOOD_DB,
+                                POSTGRES_PASSWORD: envSource.secretKeyRef.withName(config.secrets.db.system)+envSource.secretKeyRef.withKey("password"),
+                            }),
+                        ],
+                    } },
+                } },
+            },
+        },
     }
 
 }

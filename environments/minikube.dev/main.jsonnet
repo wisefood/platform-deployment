@@ -64,6 +64,7 @@ local secrets = import 'secrets.libsonnet';
         api: {
           smtp_pass: "smtp-pass",
           session_secret: "session-secret",
+          analytics_ingest: "analytics-ingest-secret",
         },
         minio: {
           minio_root: "sysadmin-pass",

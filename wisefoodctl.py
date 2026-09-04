@@ -435,7 +435,8 @@ def generate_env_main(env_name, env_spec):
                         openai_key: "openai-key",
                         langfuse_public_key: "langfuse-public-key",
                         langfuse_secret_key: "langfuse-secret-key",
-                        foodchat_assertion: "foodchat-assertion-secret"
+                        foodchat_assertion: "foodchat-assertion-secret",
+                        analytics_ingest: "analytics-ingest-secret"
                     }},
                     minio: {{
                         minio_root: "sysadmin-pass",

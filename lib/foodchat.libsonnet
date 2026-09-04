@@ -25,6 +25,12 @@ local dns = import "dns.libsonnet";
         deployment: deploy.new(name="foodchat", containers=[
             container.new("fc", pim.images.FOODCHAT)
             + container.withEnvMap({
+                LOG_FORMAT: pim.observability.LOG_FORMAT,
+                ANALYTICS_ENABLED: std.toString(pim.observability.ANALYTICS_ENABLED),
+                ANALYTICS_INGEST_URL: pim.observability.ANALYTICS_INGEST_URL,
+                // Shared with the gateway. Unset closes the ingest endpoint and
+                // leaves this service reporting nothing — off, never open.
+                ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.FOODCHAT),
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
                 WISEFOOD_CLIENT_ID: pim.keycloak.KC_FOODCHAT_CLIENT_ID,

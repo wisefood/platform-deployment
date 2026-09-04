@@ -24,6 +24,12 @@ local envSource = k.core.v1.envVarSource;
         deployment: deploy.new(name="foodscholar", containers=[
             container.new("fs", pim.images.FOODSCHOLAR)
             + container.withEnvMap({
+                LOG_FORMAT: pim.observability.LOG_FORMAT,
+                ANALYTICS_ENABLED: std.toString(pim.observability.ANALYTICS_ENABLED),
+                ANALYTICS_INGEST_URL: pim.observability.ANALYTICS_INGEST_URL,
+                // Shared with the gateway. Unset closes the ingest endpoint and
+                // leaves this service reporting nothing — off, never open.
+                ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.FOODSCHOLAR),
                 GROQ_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.groq_api_key)+envSource.secretKeyRef.withKey("password"),
                 LANGFUSE_PUBLIC_KEY: envSource.secretKeyRef.withName(config.secrets.api.langfuse_public_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
