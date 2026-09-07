@@ -120,6 +120,16 @@
     // rather not maintain it, set it to '' and the column stays NULL, which
     // costs only the regression view.
     WISEFOOD_RELEASE: '2026-09-04',
+    // Country of a browser session, resolved locally from a MaxMind GeoLite2
+    // database instead of by shipping every visitor's IP to a lookup API.
+    // The file lives on a small PVC and is fetched by an init container when
+    // the `maxmind-license-key` secret is present; when it is not, the
+    // container logs one line and the API runs with the country column
+    // NULL. Never a reason for the pod not to start.
+    GEOIP_DB_PATH: '/geoip/GeoLite2-Country.mmdb',
+    // Refetch when the file on the volume is older than this. MaxMind
+    // republishes twice a week; a month is plenty for country-level answers.
+    GEOIP_MAX_AGE_DAYS: 30,
   },
 
   ###########################

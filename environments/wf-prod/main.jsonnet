@@ -76,7 +76,11 @@ local secrets = import 'secrets.libsonnet';
                 // FoodChat verifies the signature. Both read the same secret,
                 // and a mismatch rejects every FoodChat request.
                 foodchat_assertion: "foodchat-assertion-secret",
-                analytics_ingest: "analytics-ingest-secret"
+                analytics_ingest: "analytics-ingest-secret",
+                // MaxMind GeoLite2 licence, for country geolocation of browser
+                // sessions. Optional: without it the API starts and the country
+                // column stays NULL.
+                maxmind_license: "maxmind-license-key"
             },
             minio: {
                 minio_root: "sysadmin-pass",

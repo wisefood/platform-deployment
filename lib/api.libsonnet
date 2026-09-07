@@ -19,6 +19,29 @@ local podinit = import "podinit.libsonnet";
 local envSource = k.core.v1.envVarSource;
 local dns = import "dns.libsonnet";
 
+// Fetches the GeoLite2 country database onto the shared volume.
+//
+// An init container on the API's own image, into an emptyDir, rather than a
+// Job and a claim: the file is ~6 MB and MaxMind serves it in a second or two,
+// so fetching it on every pod start costs less than a ReadWriteOnce volume
+// would — that would force the deployment to Recreate, and a blip on every
+// rollout is not a price worth paying for a country column. The script refuses
+// to be the reason the pod does not start: every failure path exits 0 with a
+// line in the log, and the API treats a missing file as "country unknown",
+// which is what it was before this existed.
+local geoip_fetcher(pim, config) =
+    container.new("geoip", pim.images.API)
+    // Absolute: the image's WORKDIR is /app/src, not /app.
+    + container.withCommand(["python", "/app/scripts/fetch_geoip.py"])
+    + container.withEnvMap({
+        GEOIP_DB_PATH: pim.observability.GEOIP_DB_PATH,
+        GEOIP_MAX_AGE_DAYS: std.toString(pim.observability.GEOIP_MAX_AGE_DAYS),
+        MAXMIND_LICENSE_KEY: envSource.secretKeyRef.withName(config.secrets.api.maxmind_license)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+    })
+    + container.withVolumeMounts([
+        volumeMount.new("geoip-vol", "/geoip", false),
+    ]);
+
 {
     generate_manifest(pim,config): {
 
@@ -34,6 +57,10 @@ local dns = import "dns.libsonnet";
                 // FoodChat spent). Unset closes the internal ingest endpoint
                 // rather than opening it — same rule as the member assertion.
                 WISEFOOD_RELEASE: pim.observability.WISEFOOD_RELEASE,
+                // Read-only view of what the geoip init container fetched.
+                // The API opens it once at startup and answers "unknown"
+                // for every session when it is not there.
+                GEOIP_DB_PATH: pim.observability.GEOIP_DB_PATH,
                 ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.API),
                 CONTEXT_PATH: "/rest",
@@ -82,6 +109,9 @@ local dns = import "dns.libsonnet";
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.API, "api"),
+            ])
+            + container.withVolumeMounts([
+                volumeMount.new("geoip-vol", "/geoip", true),
             ]),
         ],
         podLabels={
@@ -92,6 +122,10 @@ local dns = import "dns.libsonnet";
             podinit.wait4_postgresql("wait4-db", pim, config),
             podinit.wait4_http("wait4-elastic", "http://elastic:"+std.toString(pim.ports.ELASTIC)+"/_cluster/health"),
             podinit.wait4_http("wait4-keycloak", "http://keycloak:9000/health/ready"),
+            geoip_fetcher(pim, config),
+        ])
+        + deploy.spec.template.spec.withVolumes([
+            vol.fromEmptyDir("geoip-vol") + vol.emptyDir.withSizeLimit("64Mi"),
         ]),
 
         dc_svc: svcs.serviceFor(self.deployment),
