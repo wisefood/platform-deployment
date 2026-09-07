@@ -101,7 +101,7 @@
     // question. 'opt_in' records their activity without their identity;
     // 'opt_out' attributes it until they say otherwise. Left at the
     // conservative reading until the project decides — see section 7 of
-    // ANALYTICS_AUDIT_AND_PLAN.md.
+    // docs/ANALYTICS_AUDIT_AND_PLAN.md.
     ANALYTICS_CONSENT_MODE: 'opt_in',
     // Keep the platform Postgres from filling with events. Applied by a
     // retention job, not by the database.
