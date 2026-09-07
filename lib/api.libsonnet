@@ -116,6 +116,14 @@ local dns = import "dns.libsonnet";
                     activeDeadlineSeconds: 3600,
                     template: { spec: {
                         restartPolicy: "Never",
+                        // Kubernetes otherwise injects a Docker-link variable
+                        // for every service in the namespace, and `redis` sets
+                        // REDIS_PORT to `tcp://10.x.x.x:6379`. The API
+                        // deployment overrides that with a real port and never
+                        // noticed; this job does not, and died on every run.
+                        // The job talks to Postgres by DNS and needs none of
+                        // them.
+                        enableServiceLinks: false,
                         containers: [
                             container.new("retention", pim.images.API)
                             // Absolute: the image's WORKDIR is /app/src, not /app.
