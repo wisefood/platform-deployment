@@ -126,6 +126,12 @@
     // the `maxmind-license-key` secret is present; when it is not, the
     // container logs one line and the API runs with the country column
     // NULL. Never a reason for the pod not to start.
+    // Store whole client addresses rather than the /24 or /48 they sit on.
+    // A truncated network is enough to place a session on a map and not
+    // enough to tell two households apart, which is the wrong trade for a
+    // pilot whose experts need to recognise their own test sessions. Consent
+    // still governs whether the address is attributed to a named person.
+    ANALYTICS_KEEP_FULL_IP: true,
     GEOIP_DB_PATH: '/geoip/GeoLite2-Country.mmdb',
     // Refetch when the file on the volume is older than this. MaxMind
     // republishes twice a week; a month is plenty for country-level answers.

@@ -61,6 +61,7 @@ local geoip_fetcher(pim, config) =
                 // The API opens it once at startup and answers "unknown"
                 // for every session when it is not there.
                 GEOIP_DB_PATH: pim.observability.GEOIP_DB_PATH,
+                ANALYTICS_KEEP_FULL_IP: std.toString(pim.observability.ANALYTICS_KEEP_FULL_IP),
                 ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.API),
                 CONTEXT_PATH: "/rest",
