@@ -133,6 +133,26 @@ local ingress(pim, config, name, annotations, host, paths, tls_name=null) =
             paths = [
             ["/", "Prefix", "wisefood-ui", "ui-ui"], 
             ["/app(/|$)(.*)", "ImplementationSpecific", "wisefood-ui", "ui-ui"],
+            // The Flows SDK asks for these two at the ORIGIN ROOT, not under
+            // /app: it builds requests as new URL("/v2/sdk/...", apiUrl), and
+            // a leading slash discards whatever path apiUrl carries. They
+            // cannot be moved under /app from the app side.
+            //
+            // Without an entry here they fall to the "/" Prefix rule above,
+            // and rewrite-target "/$2" — which is set for the whole resource
+            // — collapses them to "/" because that rule captures nothing. The
+            // SDK's POST then arrives at the pod as POST /, lands on the
+            // static SPA location and nginx answers 405, so no tour is ever
+            // fetched. The empty first group is what makes the shared "/$2"
+            // rewrite reproduce the path unchanged: $1 is "", $2 is the whole
+            // "v2/sdk/..." tail. The pod's own nginx proxies it on to
+            // api.flows-cloud.com from there.
+            ["/()(v2/sdk/.*)", "ImplementationSpecific", "wisefood-ui", "ui-ui"],
+            // Live block updates. Same rewrite problem, and additionally the
+            // pod's nginx has no /ws/sdk location yet, so this will 404 at the
+            // pod until the image gains one. Harmless meanwhile: tours render
+            // off the REST call above and only lose dashboard hot-updates.
+            ["/()(ws/sdk/.*)", "ImplementationSpecific", "wisefood-ui", "ui-ui"],
             ["/dc(/|$)(.*)", "ImplementationSpecific", "data-catalog", "catalog-dc"],
             ["/rest(/|$)(.*)", "ImplementationSpecific", "wisefood-api", "api-api"],
             ]
