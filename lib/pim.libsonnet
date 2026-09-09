@@ -139,6 +139,30 @@
   },
 
   ###########################
+  ## FLOWS  #################
+  ###########################
+  # Interactive walkthroughs (flows.sh), rendered client-side by the UI.
+  #
+  # ORG_ID is the only switch that matters: the UI plugin returns early when it
+  # resolves empty, so an unset value disables every tour without a code
+  # change. The tours themselves are authored in the Flows dashboard
+  # (app.flows.sh), not here — see flows.sh in the wisefood-ui repo for the
+  # step-by-step spec and the data-flows anchors it points at.
+  #
+  # API_URL is deliberately empty. The SDK requests fixed paths under
+  # /v2/sdk/*, and empty makes the UI point those at its own origin, where
+  # nginx reverse-proxies them to api.flows-cloud.com. Keeping the calls
+  # first-party is what stops Brave Shields and Firefox ETP classifying them
+  # as a third-party tracker and blocking them — which showed up as a blur
+  # overlay with no tour content. Only set this to reach Flows directly and
+  # bypass the proxy.
+  flows: {
+    ORG_ID: 'dc7f41f1-e34d-40f4-afe0-59189ebc62c2',
+    ENVIRONMENT: 'production',
+    API_URL: '',
+  },
+
+  ###########################
   ## LANGFUSE  ##############
   ###########################
   langfuse: {

@@ -35,6 +35,9 @@ local dns = import "dns.libsonnet";
                 NUXT_PUBLIC_SENTRY_DSN: "https://62d87e6d48e1a80baeb888582f09a2ec@o4511264744472576.ingest.de.sentry.io/4511264746307665",
                 SENTRY_ENABLED: "true",
                 CONTEXT_PATH: "/app",
+                VITE_FLOWS_ORG_ID: pim.flows.ORG_ID,
+                VITE_FLOWS_ENVIRONMENT: pim.flows.ENVIRONMENT,
+                VITE_FLOWS_API_URL: pim.flows.API_URL,
                 SESSION_SECRET: envSource.secretKeyRef.withName(config.secrets.api.session_secret)+envSource.secretKeyRef.withKey("password"),
             })
         ],
