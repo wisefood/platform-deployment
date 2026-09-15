@@ -114,6 +114,18 @@ and the tool refuses to run without one in the approved state. An external
 MCP client (Claude Desktop, an IDE) gets the identical surface, which is what
 the docs already promise.
 
+**The provider executes exactly one thing: web search.** This is a rule, not
+a preference. No catalog, research, proposal or write tool is ever defined
+as a provider-hosted tool or run on the provider's side. All of them live in
+`wisefood-mcp`, are executed by our own agent loop, and are recorded by us.
+The model's part is to *choose* a tool and its arguments; ours is to run it,
+check it, and write it down. The one exception is web search, which Groq runs
+inside its Compound systems because that is the only place it exists — and
+even that is wrapped as an MCP tool of ours (`research`), so from the
+integrator's side it is indistinguishable from the rest and appears in the
+audit like the rest. Portability follows for free: swapping the provider
+changes one adapter and nothing about the tools.
+
 ## 2. The three guarantees
 
 These are enforced in the tool layer and the state machine — not in the
@@ -257,6 +269,17 @@ that refuse plain HTTP; the expert can upload the PDF by hand; add Chromium
 to the image only when the backlog shows it earning its weight.
 
 **First content kind: guides.** The pipeline exists and 125 sources wait.
+
+**One reading to confirm during review.** "We don't implement tools via the
+provider, only the web search" is taken above to mean *no provider-hosted or
+provider-executed tools except search* — the model still selects our tools
+through its function-calling interface, and we execute them. If it is meant
+more strictly — that the model must not use function-calling at all, and
+should pick tools by emitting structured JSON that our loop dispatches — that
+is also buildable, but it is the manual action protocol the earlier
+`foodscholar-lib` agent used and its own plan regretted (brittle argument
+parsing, no parallel calls, every model upgrade re-tuned by hand). Say which,
+and §1 and this section will be adjusted before anything is built.
 
 **Next step: review.** Nothing is built until this document has been read
 and the scope or phasing adjusted.
