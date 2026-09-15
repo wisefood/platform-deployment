@@ -1,6 +1,6 @@
 # Source Integrator — a conversational agent for bringing new sources into the catalog
 
-_Status: proposal. Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+_Status: awaiting review (decisions in §6 taken 2026-09-15). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
 
 The expert console gains an assistant that researches candidate sources, ranks
 them, checks whether their licence permits use, and — only after a person
@@ -210,26 +210,56 @@ which is how the ranking learns without anyone training anything.
 | food-composition table | `create_fctable` → *table extraction* | **gap:** no pipeline; tables in PDF/XLS need their own extractor |
 | recipe collection | `create_rcollection` + `register_recipe_source` → RecipeWrangler import | **largest gap:** today one bespoke script per source. Needs a generalised import in RecipeWrangler (URL list or feed → parse → profiling chain), and a `license` field on `Source` |
 
-## 6. Decisions to make before building
+## 6. Decisions — taken 2026-09-15, and the one constraint they create
 
-1. **Model provider.** Native tool-calling is non-negotiable (the manual JSON
-   loop is what the last attempt regretted). OpenAI is wired and keyed today;
-   Claude needs a key provisioned. Recommendation: build on the
-   OpenAI-compatible tool schema — which is also what APISIX `ai-proxy-multi`
-   speaks — default to OpenAI now, add Claude as a second provider when its
-   key exists, and route through the APISIX AI gateway so failover and
-   per-consumer limits come for free (see the gateway plan, §1.3–1.5).
-2. **Web search.** Provider-native (OpenAI / Claude built-in search) needs no
-   new vendor or key and gives the "searches when it needs to" behaviour.
-   A dedicated API (Brave, Tavily) gives more control and a cleaner data-egress
-   story. Recommendation: provider-native behind the `web_search` tool, with
-   the tool interface stable so a dedicated provider can replace it later.
-3. **Playwright.** A real dependency (Chromium in the image). Start without it;
-   `fetch_url` reports "needs a browser" for sites that refuse, and the
-   expert can upload the PDF by hand. Add it when the backlog shows it is
-   worth it.
-4. **First content kind.** Guides — the pipeline exists, 125 sources wait,
-   and national dietary guidance is the platform's core material.
+**Provider: Groq only.** No new vendor, no new key. Every model Groq hosts
+supports user-defined tool calling; for the agent loop the recommended
+choices with parallel tool calls are `llama-3.3-70b-versatile` and the
+`openai/gpt-oss-120b` / `openai/gpt-oss-20b` pair — the latter two are
+already what FoodChat and FoodScholar run on Groq today (they are the model
+names in the console's LLM observability charts), so tracing, pricing and
+the APISIX `ai-proxy-multi` route already know them. Start the loop on
+`openai/gpt-oss-120b`; keep the model id a setting so it can be swapped from
+the console without a deploy, as the gateway plan already allows.
+
+**Web search: provider-native.** Groq provides this through its Compound
+systems — `groq/compound` (several tool calls per request) and
+`groq/compound-mini` (one, ~3× lower latency) — with built-in web search,
+visit-website, code execution and Wolfram Alpha, and the system decides on
+its own when to search. That is exactly the "searches implicitly like
+ChatGPT" behaviour asked for.
+
+**The constraint.** Groq's docs are explicit: on `groq/compound*`,
+*"custom user-provided tools are not supported."* One model therefore cannot
+both search the web natively and call the catalog tools. The design splits
+into two roles, which turns out to be the cleaner architecture anyway:
+
+| role | model | tools | what it does |
+|---|---|---|---|
+| **researcher** | `groq/compound` | Groq built-ins only (search, visit, code) | given a question or a backlog row, finds candidates, reads them, returns structured findings with the URLs it visited and the text it saw |
+| **integrator** | `openai/gpt-oss-120b` (tool-calling) | `wisefood-mcp` tools | runs the conversation, calls the researcher as *one of its tools*, checks coverage against the catalog, proposes licences from the researcher's evidence, drafts proposals, drives the gated writes |
+
+The researcher is wrapped as an MCP tool (`research(query \| url) → findings`)
+so the integrator never knows or cares which model did the searching, and so
+the console's audit shows research as a tool call like any other — with the
+URLs visited recorded, which §2.3 needs. If Compound's search ever proves too
+shallow for a class of source, a Brave/Tavily `web_search` tool drops in
+behind the same interface with no change to the integrator.
+
+Two notes for the deployment: Compound is not available on Groq's
+regional/sovereign endpoints, so the researcher must use the global endpoint;
+and Groq excludes Compound from HIPAA-covered processing, which does not
+apply here — this is source research by experts, with no member data in the
+loop — but is the kind of thing worth stating once.
+
+**Playwright: deferred.** `fetch_url` reports "needs a browser" for sites
+that refuse plain HTTP; the expert can upload the PDF by hand; add Chromium
+to the image only when the backlog shows it earning its weight.
+
+**First content kind: guides.** The pipeline exists and 125 sources wait.
+
+**Next step: review.** Nothing is built until this document has been read
+and the scope or phasing adjusted.
 
 ## 7. Phases
 
