@@ -1,6 +1,13 @@
 # Source Integrator — a conversational agent for bringing new sources into the catalog
 
-_Status: awaiting review (decisions in §6 taken 2026-09-15). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+_Status: **Phase 1 built** (2026-09-15). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+
+> **What exists now.** `wisefood-mcp` (13 tools, 39 tests) in wisefood-client;
+> `src/integrator/` in FoodScholar with four tables, the agent loop and the
+> approval wall (20 tests against a real Postgres); admin/expert-gated proxy
+> routes on the gateway; `/console/integrator` in the UI. Catalog writes are
+> **off** — the write tools are built and gated shut, and are not even shown
+> to the model. See §7 for what each phase still owes.
 
 The expert console gains an assistant that researches candidate sources, ranks
 them, checks whether their licence permits use, and — only after a person
@@ -286,28 +293,49 @@ and the scope or phasing adjusted.
 
 ## 7. Phases
 
-**Phase 1 — foundation (no catalog writes yet).**
-`wisefood-mcp` with read + research tools; proposal/run/tool-call tables
-(`integrator_session`, `integrator_message`, `integration_proposal`,
-`integration_run`, `integration_tool_call`) in FoodScholar's Postgres; the
-agent loop with step/token budgets and a Langfuse trace per run; the seeded
-backlog from the spreadsheet; the console page — chat, proposal cards with
-approve/reject/rerank, the queue. Deliverable: an expert can ask "what
-Bulgarian dietary guidance exists and may we use it?" and get ranked,
-evidenced proposals they can approve — with approval landing nothing yet.
+**Phase 1 — foundation. ✅ Built 2026-09-15.**
 
-**Phase 2 — guides end to end.** Gated write tools for the guide path; the
-run drives the existing extraction + import and reports job progress in the
-same card style the console already has. Deliverable: approve → guide, its
-artifact, its guideline entries, with full provenance.
+| piece | where |
+|---|---|
+| Tool layer, 13 tools, 3 groups | `wisefood-client/src/wisefood_mcp/` |
+| MCP server process (`wisefood-mcp`) | `wisefood_mcp/server.py`, `pip install wisefood[mcp]` |
+| Tables: session, message, proposal, tool call, backlog | `foodscholar/src/models/db.py` |
+| Agent loop, budgets, replay | `foodscholar/src/integrator/agent.py` |
+| Approval wall (not a tool) | `foodscholar/src/integrator/service.py::approve` |
+| API, admin/expert gated | `wisefood-api/src/routers/foodscholar.py` |
+| Console page | `wisefood-ui/app/pages/console/integrator.vue` |
+| Backlog seeder | `foodscholar/scripts/seed_integrator_backlog.py` |
 
-**Phase 3 — articles.** DOI-first: Unpaywall/Crossref licence, article
-creation, enrichment enqueue.
+Notes worth carrying forward:
 
-**Phase 4 — textbooks and FCTs.** The two extraction gaps.
+* The seeder imports **217** of the spreadsheet's 219 rows and names the two
+  it skips (country-only rows with nothing else). The food-composition sheet
+  has no Title column at all, so a title is built from the country.
+* `wisefood_mcp` is importable **without** the `mcp` SDK. That matters: the
+  SDK needs `starlette>=1.0` and FastAPI 0.115 needs `<0.47`, so the two
+  cannot share an environment. FoodScholar depends on plain
+  `wisefood>=0.0.27`; only the standalone server process takes the `[mcp]`
+  extra.
+* Not yet done in Phase 1: the ranking rubric is a field the agent fills, not
+  yet a weighted scorer with console-tunable weights (§4); drag-to-rerank is
+  an API (`/proposals/rerank`) with no drag handle in the UI yet; and no
+  Langfuse trace is emitted per run — the audit table records tool calls but
+  model cost per run is not yet visible in the console.
 
-**Phase 5 — recipes.** Generalised RecipeWrangler import + `license` on
-`Source`.
+**Phase 2 — guides end to end.** Turn on `INTEGRATOR_WRITES_ENABLED`, show the
+write tools to the model, and drive the existing extraction and import. The
+gated tools already exist (`create_guide`, `upload_artifact`,
+`enqueue_guideline_extraction`, `import_guidelines`) and already refuse an
+unapproved proposal; what Phase 2 adds is the run state machine, job polling
+in the console, and the first real write.
+
+**Phase 3 — articles.** DOI-first: Unpaywall/Crossref licence (already in
+`licence_evidence`), article creation, enrichment enqueue.
+
+**Phase 4 — textbooks and FCTs.** The two extraction gaps in §5.
+
+**Phase 5 — recipes.** Generalised RecipeWrangler import and a `license`
+field on `Source`.
 
 ## 8. Risks, named
 
