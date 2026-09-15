@@ -61,6 +61,22 @@ local geoip_fetcher(pim, config) =
                 // The API opens it once at startup and answers "unknown"
                 // for every session when it is not there.
                 GEOIP_DB_PATH: pim.observability.GEOIP_DB_PATH,
+                // Product mail — "here is your meal plan", share links. Wholly
+                // separate from the SMTP Keycloak uses for verification and
+                // password resets, which it holds in its own realm config.
+                // Unset SMTP_HOST turns the feature off rather than failing at
+                // send time, so an environment without a mail server simply
+                // does not offer it.
+                SMTP_HOST: config.api.SMTP_SERVER,
+                SMTP_PORT: std.toString(config.api.SMTP_PORT),
+                SMTP_USERNAME: config.api.SMTP_USERNAME,
+                SMTP_PASSWORD: envSource.secretKeyRef.withName(config.secrets.api.smtp_pass)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                // 465 is implicit TLS; STARTTLS is for 587. Setting both would
+                // wrap TLS in TLS and hang until the timeout.
+                SMTP_SSL: std.toString(config.api.SMTP_PORT == "465"),
+                SMTP_STARTTLS: std.toString(config.api.SMTP_PORT != "465"),
+                SMTP_FROM: config.api.SMTP_USERNAME,
+                SMTP_FROM_NAME: "WiseFood",
                 ANALYTICS_KEEP_FULL_IP: std.toString(pim.observability.ANALYTICS_KEEP_FULL_IP),
                 ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.API),
