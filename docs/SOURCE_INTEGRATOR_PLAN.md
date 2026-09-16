@@ -316,11 +316,25 @@ Notes worth carrying forward:
   cannot share an environment. FoodScholar depends on plain
   `wisefood>=0.0.27`; only the standalone server process takes the `[mcp]`
   extra.
-* Not yet done in Phase 1: the ranking rubric is a field the agent fills, not
-  yet a weighted scorer with console-tunable weights (§4); drag-to-rerank is
-  an API (`/proposals/rerank`) with no drag handle in the UI yet; and no
-  Langfuse trace is emitted per run — the audit table records tool calls but
-  model cost per run is not yet visible in the console.
+* **Transparency** is the part that turned out to matter most. Every turn
+  produces a timeline — what it searched for, which pages it opened, what the
+  licence evidence said, how long each took — in the same shape FoodScholar's
+  Q&A already streams, so the console renders both with one component. What
+  was *attempted* and what *came of it* are separate fields: the first
+  version overwrote the query with the error, and a failed search that has
+  lost its query cannot be judged. The prompt states plainly that the
+  assistant cannot approve anything or write to the catalog itself.
+* **Ranking** is arithmetic over established facts, not a number the model
+  produced: licence (heaviest), coverage gap, authority, tractability,
+  completeness — each named, weighted and stored on the proposal, with
+  weights tunable from settings. An undetermined licence scores 0.3 rather
+  than 0, or a fresh backlog would bury itself.
+* **Tracing**: one Langfuse trace per turn with a child span per tool call,
+  inert when tracing is off, every backend failure swallowed.
+* Still open after Phase 1: nothing has run against a live Groq key — the
+  `research` tool is verified against a faithful fake of Compound's
+  `executed_tools` shape, not the real thing. And the console has no page for
+  editing the rubric's weights; they are settings, changed by an operator.
 
 **Phase 2 — guides end to end.** Turn on `INTEGRATOR_WRITES_ENABLED`, show the
 write tools to the model, and drive the existing extraction and import. The
