@@ -386,6 +386,54 @@ Notes worth carrying forward:
   there to watch the first one, not because it pulled a new image. And nothing
   has still run against a live Groq key.
 
+**Security pass — 2026-09-16.** An audit of the whole surface, after the
+question "can a user drive this freely, or flood us, and does the agent reflect
+the caller's rights?". Four findings, all now closed.
+
+* **`fetch_url` was an SSRF.** It validated the scheme and nothing else, and
+  followed redirects blindly. `http://169.254.169.254/…`, `http://redis:6379`
+  and the gateway's own internal port were all reachable from the pod, and the
+  body came back into the model's context. It is also the worst place for it:
+  the tool takes a URL the *model* chose, and the model chose it from pages
+  `research` returned, so the destination is attacker-influenced input — a
+  page can say "see the full text at …" and pick the target. Now every
+  hostname is resolved and every address it resolves to must be public, one
+  inward answer is enough to refuse, each redirect hop is re-checked, and the
+  size cap bites while streaming instead of after the body is buffered.
+  `WISEFOOD_MCP_ALLOWED_PRIVATE_HOSTS` is a list of names rather than a
+  switch, so allowing an internal mirror does not also open the metadata
+  service. Residual risk, stated rather than papered over: the connection is
+  made by hostname afterwards, so DNS rebinding is mitigated, not closed.
+* **The agent acted as a service account.** It built its catalog client from
+  `WISEFOOD_CLIENT_ID/SECRET`, so an expert who may not edit guides could edit
+  one by asking the assistant to. The gateway now forwards the caller's own
+  bearer in `X-WiseFood-Delegated-Token` — a header, because bodies are logged
+  and this one is persisted to an audit table — and the client acts with their
+  roles. `wisefood-client` 0.0.29 adds `Credentials(access_token=…)` for it,
+  and the property that makes it worth anything is negative: a delegated
+  client **cannot** obtain a token by itself. `authenticate()` raises, an
+  expired token raises, and there is no fallback. Without a token the catalog
+  tools are simply absent from the turn, because a failure that makes the
+  agent *more* capable is the kind nobody reports.
+* **Nothing was rate limited.** Now 60 turns per person per hour, 3 concurrent
+  runs per person and 10 across the deployment — the last bounding threads as
+  much as spend, since each run holds one for as long as its extraction takes.
+  Counted from Postgres rather than a cache, so an outage cannot quietly lift
+  the limit, and stalled runs are discounted or a node failure would consume
+  capacity permanently. Both surface as 429 with `Retry-After`.
+* **The audit trail was readable by every expert.** A tool call carries the
+  queries a curator typed and the URLs they were chasing. An expert now sees
+  their own; an admin sees everything, because an audit trail nobody can read
+  in full is not one. The proposal queue stays shared — curators rank each
+  other's candidates, which is its purpose.
+
+Unchanged and still true: every integrator route is admin-or-expert at the
+gateway; `user_sub` comes from the token and never from the body; sessions are
+ownership-checked; and no tool approves. The standalone `wisefood-mcp` process
+is a different trust model and says so in its own docstring — it acts with
+whatever credentials its environment holds, for whoever can reach its pipe, and
+is meant to be run as a local operator tool rather than a shared service.
+
 **Phase 3 — articles.** DOI-first: Unpaywall/Crossref licence (already in
 `licence_evidence`), article creation, enrichment enqueue.
 

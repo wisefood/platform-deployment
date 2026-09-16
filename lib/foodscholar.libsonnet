@@ -86,6 +86,16 @@ local envSource = k.core.v1.envVarSource;
                 // person, who can retry to pick it up.
                 INTEGRATOR_POLL_INTERVAL: "20",
                 INTEGRATOR_EXTRACTION_TIMEOUT: "3600",
+                // Flood control. These routes are already admin-and-expert
+                // only, so this is not about strangers: it is about a client
+                // stuck in a loop, or one person's credentials being used to
+                // spend the platform's Groq budget. Counted from the database
+                // rather than a cache, so an outage cannot silently lift them.
+                INTEGRATOR_MAX_TURNS_PER_HOUR: "60",
+                // Each run holds a thread for as long as its extraction takes,
+                // so the total is a ceiling on threads as much as on spend.
+                INTEGRATOR_MAX_RUNS_PER_USER: "3",
+                INTEGRATOR_MAX_RUNS_TOTAL: "10",
                 // Unpaywall asks callers to identify themselves. Ours, never a
                 // user's address.
                 INTEGRATOR_CONTACT_EMAIL: "info@wisefood-project.eu",
