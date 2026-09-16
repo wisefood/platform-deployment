@@ -73,6 +73,17 @@ local envSource = k.core.v1.envVarSource;
                 GUIDELINE_ENRICHMENT_MODEL: "openai/gpt-oss-20b",
                 // OpenAI, not Groq: vision over rendered PDF pages.
                 GUIDELINE_EXTRACTION_MODEL: "gpt-5.4",
+                // ...which needs an OpenAI key, and this service did not have
+                // one. `guideline_extractor.ensure_api_key()` raises without
+                // it, so guideline extraction — the pipeline the Source
+                // Integrator drives for every dietary guide — could not run at
+                // all. The secret already existed; only APISIX was given it.
+                //
+                // Optional so a deployment with no OpenAI key still starts:
+                // the failure then happens at extraction time with a message
+                // that names the cause, rather than as a pod that will not come
+                // up for a feature nobody may be using.
+                OPENAI_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.openai_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 // Source Integrator. Writes stay OFF by default even though the
                 // Phase 2 pipeline works: turning them on is a decision somebody
                 // makes when they are there to watch the first integration, not
