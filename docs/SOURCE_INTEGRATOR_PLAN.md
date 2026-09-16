@@ -1,6 +1,6 @@
 # Source Integrator — a conversational agent for bringing new sources into the catalog
 
-_Status: **Phase 1 built** (2026-09-15). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+_Status: **Phases 1–2 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
 
 > **What exists now.** `wisefood-mcp` (13 tools, 39 tests) in wisefood-client;
 > `src/integrator/` in FoodScholar with four tables, the agent loop and the
@@ -336,12 +336,55 @@ Notes worth carrying forward:
   `executed_tools` shape, not the real thing. And the console has no page for
   editing the rubric's weights; they are settings, changed by an operator.
 
-**Phase 2 — guides end to end.** Turn on `INTEGRATOR_WRITES_ENABLED`, show the
-write tools to the model, and drive the existing extraction and import. The
-gated tools already exist (`create_guide`, `upload_artifact`,
-`enqueue_guideline_extraction`, `import_guidelines`) and already refuse an
-unapproved proposal; what Phase 2 adds is the run state machine, job polling
-in the console, and the first real write.
+**Phase 2 — guides end to end. ✅ Built 2026-09-16.**
+
+* **The executor, not the model.** Phase 1 planned to "show the write tools to
+  the model and let it drive". Building it showed that to be wrong on three
+  counts, and it was changed: an extraction over a 90-page PDF runs for
+  minutes, which no conversational turn survives; a run that fails halfway has
+  to resume from the step that failed, which is a state machine rather than a
+  prompt; and what gets written into a public-health catalog should not vary
+  with a sampling temperature. So `integrator/executor.py` runs a fixed
+  sequence per kind — and runs it *through the same gated tools*, so every
+  step still passes `require_approved` and still lands in the audit table
+  exactly as a model-issued call would. The write tools stay hidden from the
+  chat model.
+* **The pipeline**, for a guide: `create_guide` → `upload_artifact` →
+  `enqueue_guideline_extraction` → poll `guideline_extraction_status` →
+  `import_guidelines` as a preview → `import_guidelines` for real. Articles
+  and textbooks get the first two steps; there is no extraction behind them.
+* **Preflight refuses before writing.** A guide with no fetched PDF, an
+  unapproved proposal, a kind with no pipeline, writes switched off — all
+  caught before anything is created, because a half-created guide is somebody
+  having to notice and delete it. A licence that forbids copying registers the
+  reference and stops, which is the `content_permitted` rule made visible.
+* **`integration_runs`**, a row per *attempt*. Folding the state onto the
+  proposal would mean a retry erased the evidence of why the first try failed.
+  A retry reuses the urn and artifact the failed attempt created rather than
+  making a second copy of either.
+* **Stalled, computed not stored.** A run whose pod died mid-extraction is
+  indistinguishable from a working one by its status column, and one of them
+  needs a person. A heartbeat older than five minutes reads `stalled` to every
+  reader, without writing the column back — the worker may yet return — and a
+  stalled run does not block a retry.
+* **Two bugs in the Phase 1 write tools**, found by building on them and both
+  silent: `import_guidelines` posted `guide_urn` where
+  `GuidelineImportRequest` requires `guide_id`, which validates as a *missing*
+  field — a 422 and no import; and the planned count of a dry run is not
+  `total_created` (which is 0 by definition on a preview, since nothing was
+  created) but the number of items marked `would_create`. Reading the former
+  would have failed every run with "nothing new to import".
+* **The console**: `RunPanel.vue` on the approved card, polling every five
+  seconds with a chained timeout, showing the stage, the page counter while a
+  document is being read, what landed, and a retry on failure. Preview and
+  Integrate are separate presses.
+* **Where it lives**: the Source Integrator is a section of the **Asset
+  Manager** (`/console/assets/integrator`), not a category of its own. The
+  other four asset sections are libraries of what it brought in.
+* Still open: `INTEGRATOR_WRITES_ENABLED` stays **off** by default, including
+  now that this works — a deployment should turn writes on when somebody is
+  there to watch the first one, not because it pulled a new image. And nothing
+  has still run against a live Groq key.
 
 **Phase 3 — articles.** DOI-first: Unpaywall/Crossref licence (already in
 `licence_evidence`), article creation, enrichment enqueue.

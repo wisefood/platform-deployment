@@ -73,6 +73,22 @@ local envSource = k.core.v1.envVarSource;
                 GUIDELINE_ENRICHMENT_MODEL: "openai/gpt-oss-20b",
                 // OpenAI, not Groq: vision over rendered PDF pages.
                 GUIDELINE_EXTRACTION_MODEL: "gpt-5.4",
+                // Source Integrator. Writes stay OFF by default even though the
+                // Phase 2 pipeline works: turning them on is a decision somebody
+                // makes when they are there to watch the first integration, not
+                // something a deployment inherits from a new image. With it off,
+                // the assistant researches, ranks and proposes as before, and an
+                // approved proposal simply has nothing to run.
+                INTEGRATOR_WRITES_ENABLED: "false",
+                // How an integration run watches its extraction. The timeout is
+                // not a kill — the extraction worker carries on regardless — it
+                // is how long one run waits before handing the wait back to a
+                // person, who can retry to pick it up.
+                INTEGRATOR_POLL_INTERVAL: "20",
+                INTEGRATOR_EXTRACTION_TIMEOUT: "3600",
+                // Unpaywall asks callers to identify themselves. Ours, never a
+                // user's address.
+                INTEGRATOR_CONTACT_EMAIL: "info@wisefood-project.eu",
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),
