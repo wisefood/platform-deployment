@@ -80,6 +80,29 @@ local envSource = k.core.v1.envVarSource;
                 // the assistant researches, ranks and proposes as before, and an
                 // approved proposal simply has nothing to run.
                 INTEGRATOR_WRITES_ENABLED: "false",
+                // Named here like every other model this app talks to. The
+                // agent loop needs user-defined tool calling, which rules out
+                // the Compound systems; research is the one place a Compound
+                // model belongs, because its web search is the only web search
+                // on this platform.
+                INTEGRATOR_MODEL: "openai/gpt-oss-120b",
+                INTEGRATOR_RESEARCH_MODEL: "groq/compound",
+                // What one conversational turn may spend before it stops and
+                // says so. An agent with a search tool and no ceiling can
+                // spend an afternoon and a month's quota on one question.
+                INTEGRATOR_MAX_STEPS: "12",
+                INTEGRATOR_MAX_TOKENS: "120000",
+                // The ranking rubric, tunable without a deploy — which was the
+                // point of making them settings, and is not true unless they
+                // are actually here. Licence dominates because a source we may
+                // only point at is worth less than one we may read. Normalised
+                // at use, so these are ratios rather than percentages that have
+                // to add up.
+                INTEGRATOR_WEIGHT_LICENCE: "0.40",
+                INTEGRATOR_WEIGHT_COVERAGE_GAP: "0.25",
+                INTEGRATOR_WEIGHT_AUTHORITY: "0.20",
+                INTEGRATOR_WEIGHT_TRACTABILITY: "0.10",
+                INTEGRATOR_WEIGHT_COMPLETENESS: "0.05",
                 // How an integration run watches its extraction. The timeout is
                 // not a kill — the extraction worker carries on regardless — it
                 // is how long one run waits before handing the wait back to a
