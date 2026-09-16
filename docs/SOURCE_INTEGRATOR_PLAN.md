@@ -1,6 +1,6 @@
 # Source Integrator — a conversational agent for bringing new sources into the catalog
 
-_Status: **Phases 1–4 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+_Status: **Phases 1–5 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
 
 > **What exists now.** `wisefood-mcp` (13 tools, 39 tests) in wisefood-client;
 > `src/integrator/` in FoodScholar with four tables, the agent loop and the
@@ -543,7 +543,93 @@ methods in the UI service against `/v1/rcollections` and `/v1/fctables` —
 larger than it sounds, because the existing sections each carry review status,
 verification and artifact handling.
 
-**Phase 5 — recipes.** Generalised RecipeWrangler import and a `license`
+**Phase 5 — recipes. ✅ Built 2026-09-16.** (One catalog chore remains; see the end.)
+
+The gap was never the parsing. Nine importers live in RecipeWrangler's
+`scripts/`, three to four hundred lines each, and every one hand-rolls CSS
+selectors for one site's markup — which is why adding a source is a week
+rather than an afternoon. But recipe sites publish `schema.org/Recipe` as
+JSON-LD because search engines require it, and `utils/recipe_url.py` has
+parsed that for a while: it is what backs "import from a URL" in the app.
+What was missing is the boring half — *which pages*.
+
+* **`ingest/discovery.py`** reads a sitemap, a sitemap index, an RSS or Atom
+  feed, or a plain URL list. An `include` pattern is what turns a site's whole
+  sitemap into a recipe import, and filtering before fetching means the pages
+  skipped are pages never requested. It deliberately will **not** walk HTML
+  looking for links: that is crawling, it needs judgement about what counts as
+  a recipe page, and it is how an importer becomes a scraper nobody can reason
+  about.
+* **A sitemap pointing at another domain is not followed.** A source vouches
+  for its own pages; following one would quietly attribute a third party's
+  recipes to it. A document declaring a DOCTYPE or entities is refused rather
+  than parsed — ElementTree expands internal entities, which is all "billion
+  laughs" needs.
+* **`ingest/harvest.py`** walks the pages under two obligations that do not
+  apply to one person pasting one link: robots.txt is honoured, because
+  fetching eight hundred pages is crawling somebody's site; and requests are
+  paced, because a source worth importing is usually a small organisation on
+  modest hosting. A host whose robots.txt cannot be read is treated as
+  allowing us — the convention, and wrong less often than refusing a source
+  over a 404. Nothing raises for a failed page: the import is what worked plus
+  a grouped account of what did not.
+* **The SSRF check and bounded fetch are now shared** rather than copied. Two
+  copies of a security check drift, and the one that drifts is never the one
+  anybody is looking at.
+* **`Source` gains `license`, `license_url` and `attribution`.** `None` means
+  undetermined, which is not the same as permissive — it is the honest state
+  for a corpus assembled before anyone asked, and
+  `undetermined_licence_slugs()` makes that exposure listable. **Ten of the
+  twelve active sources are in it.** MyPlate is public domain by statute;
+  user-created recipes are `user-owned`, named so it is never read as "no
+  licence recorded, probably fine".
+
+* **`ingest/pipeline.py` connects the three.** `recipe_create` was already the
+  seven-step chain — split ingredients, estimate weights, profile nutrition,
+  detect allergens, write Neo4j, save the Postgres trace, index Elasticsearch
+  — so importing a source is discovery → harvest → that, per recipe. Async
+  rather than threaded on purpose: `recipe_create` is a coroutine reaching
+  Postgres, Neo4j and Elasticsearch through the application's own clients, and
+  a worker thread would mean a second event loop touching connections that
+  belong to the first. The blocking part, fetching, goes to a thread instead.
+* **A run, not a request.** Profiling one recipe is seconds and a source is
+  hundreds of them, so `POST /api/v1/ingest/source` returns a run to poll,
+  with state in Postgres (`recipe_source_import`) — the interesting question
+  about a two-hour import is what it has done so far, and a dict a restart
+  empties cannot answer it. `stalled` is computed from the heartbeat, never
+  written back. Two concurrent runs at most, because profiling is the
+  expensive part of the service.
+* **It opens on a dry run**, on both sides. Reading a source costs fetches;
+  writing it costs a profiling run per recipe and is much harder to undo — and
+  the preview answers the only question that decides whether a source is
+  importable at all: how many of its pages actually publish the markup. A
+  clean preview then offers the real thing.
+* **The console page** (`/console/assets/collections/import`) drives it and
+  watches it: stage, page counter, the five counts, and *why* pages did not
+  import, grouped — a source where every page is missing instructions has a
+  markup problem rather than a bad run. Admin and expert only at the gateway,
+  since it writes into the corpus and fetches at length from somebody else's
+  site.
+
+Still to do: create the `urn:rcollection:*` documents for the sources that
+lack them. The registry notes MyPlate resolves to a collection that does not
+exist, and the new Recipe Collections console section is now the place to
+create it.
+
+**Console sections — ✅ built 2026-09-16.** The Asset Manager now has
+**Recipe Collections** and **Composition Tables** alongside guides, articles,
+recipes and textbooks. Both were missing entirely: collections had one
+participant-facing page and a read-only service, and FCTs had nothing at all
+while the integrator had just started creating them.
+
+Each is a list page with search, paging and create, plus a detail page that
+PATCHes only what changed — a full-field PATCH would overwrite whatever
+another curator edited while the page was open, and rewrite fields the form
+does not show. The collections list counts how many have no licence recorded,
+because that is the corpus's exposure and burying it is how it stays. An
+FCT's measured figures — entries, nutrients, completeness — are shown
+read-only: editing a measurement by hand would turn it back into a claim, and
+the point of measuring was that nobody should have to take it on trust. Generalised RecipeWrangler import and a `license`
 field on `Source`.
 
 ## 8. Risks, named
