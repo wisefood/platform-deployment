@@ -1,6 +1,6 @@
 # Source Integrator — a conversational agent for bringing new sources into the catalog
 
-_Status: **Phases 1–2 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+_Status: **Phases 1–3 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
 
 > **What exists now.** `wisefood-mcp` (13 tools, 39 tests) in wisefood-client;
 > `src/integrator/` in FoodScholar with four tables, the agent loop and the
@@ -223,8 +223,8 @@ which is how the ranking learns without anyone training anything.
 
 | kind | path | state |
 |---|---|---|
-| dietary guide (PDF/HTML) | `create_guide` → `upload_artifact` → `enqueue_guideline_extraction` → poll → `import_guidelines` | **exists end to end.** 125 in the backlog. First target. |
-| article (DOI/URL) | `licence_evidence(doi)` → `create_article` → `enqueue_article_enrichment` | **exists**; Unpaywall gives the licence per DOI, which makes journals the cleanest licence story of the five |
+| dietary guide (PDF/HTML) | `create_guide` → `upload_artifact` → `enqueue_guideline_extraction` → poll → `import_guidelines` | **built (Phase 2).** 125 in the backlog. |
+| article (DOI/URL) | `doi_metadata` → `licence_evidence(doi)` → `create_article` → `enqueue_article_enrichment` → poll | **built (Phase 3).** Unpaywall gives the licence per DOI, which makes journals the cleanest licence story of the five |
 | textbook (PDF) | `create_textbook` → `upload_artifact` → *passage extraction* | **gap:** no PDF→passages pipeline found; PyMuPDF + the guideline extractor's chunking is the obvious base |
 | food-composition table | `create_fctable` → *table extraction* | **gap:** no pipeline; tables in PDF/XLS need their own extractor |
 | recipe collection | `create_rcollection` + `register_recipe_source` → RecipeWrangler import | **largest gap:** today one bespoke script per source. Needs a generalised import in RecipeWrangler (URL list or feed → parse → profiling chain), and a `license` field on `Source` |
@@ -434,8 +434,40 @@ is a different trust model and says so in its own docstring — it acts with
 whatever credentials its environment holds, for whoever can reach its pipe, and
 is meant to be run as a local operator tool rather than a shared service.
 
-**Phase 3 — articles.** DOI-first: Unpaywall/Crossref licence (already in
-`licence_evidence`), article creation, enrichment enqueue.
+**Phase 3 — articles. ✅ Built 2026-09-16.**
+
+* **DOI-first, and the reason is narrow.** `doi_metadata` asks Crossref for the
+  record the publisher deposited and returns it shaped like a catalog article.
+  The system prompt now forbids typing a title, author list or year out of a
+  search result. This is the single highest-value rule in the component: a
+  citation with invented authors is the worst thing that can enter a scientific
+  catalog, because it reads perfectly, cites perfectly and is false — unlike a
+  broken link, nothing about it looks wrong later.
+* **Crossref outranks the assistant**, the opposite precedence from a guide's
+  spec. `article_spec` takes title, authors, venue, year, abstract, language,
+  DOI and the citation counts from the record, and lets the assistant fill only
+  what Crossref has no field for: topics, reader group, population group.
+  Crossref `subject` becomes keywords when nothing better was offered.
+* **The pipeline**: `doi_metadata` → `licence_evidence(doi)` → propose →
+  approve → `create_article` → `enqueue_article_enrichment` → poll
+  `article_enrichment_status`. Unpaywall and Crossref make journals the
+  cleanest licence story of the five kinds, as §5 predicted.
+* **A duplicate DOI is refused in preflight**, before anything is created. A
+  DOI names one paper, so holding it twice is never right. Best-effort and
+  documented as such — the catalog's search is fuzzy, so this catches the
+  duplicate it finds rather than promising there is no other; when it does fire
+  it is certain, because an exact DOI match is the same work whatever the
+  titles look like. `doi`, `venue`, `publication_year` and `authors` were added
+  to the catalog tools' summary fields to make that check exact.
+* **Enrichment failure fails the run**, and says the article is in the catalog
+  and can be enriched again. An article is a usable record the moment it
+  exists, so this is a quality step rather than the point — but a silent
+  half-integration is worse than a red one somebody can retry.
+* Two things found while building: Crossref abstracts are JATS XML, and naive
+  tag-stripping leaves `health .` in every sentence with inline markup, which
+  is most of them. And the obvious DOI pattern (`10.\d{4,9}/`) rejects valid
+  DOIs; the failure modes are not symmetric, so the check is loose and a wrong
+  guess costs one request that answers "no record".
 
 **Phase 4 — textbooks and FCTs.** The two extraction gaps in §5.
 
