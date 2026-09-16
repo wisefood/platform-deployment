@@ -1,6 +1,6 @@
 # Source Integrator — a conversational agent for bringing new sources into the catalog
 
-_Status: **Phases 1–3 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
+_Status: **Phases 1–4 built** (2026-09-16). Companion to `LLM_SAFEGUARDING_AND_GATEWAY_PLAN.md`._
 
 > **What exists now.** `wisefood-mcp` (13 tools, 39 tests) in wisefood-client;
 > `src/integrator/` in FoodScholar with four tables, the agent loop and the
@@ -225,9 +225,9 @@ which is how the ranking learns without anyone training anything.
 |---|---|---|
 | dietary guide (PDF/HTML) | `create_guide` → `upload_artifact` → `enqueue_guideline_extraction` → poll → `import_guidelines` | **built (Phase 2).** 125 in the backlog. |
 | article (DOI/URL) | `doi_metadata` → `licence_evidence(doi)` → `create_article` → `enqueue_article_enrichment` → poll | **built (Phase 3).** Unpaywall gives the licence per DOI, which makes journals the cleanest licence story of the five |
-| textbook (PDF) | `create_textbook` → `upload_artifact` → *passage extraction* | **gap:** no PDF→passages pipeline found; PyMuPDF + the guideline extractor's chunking is the obvious base |
-| food-composition table | `create_fctable` → *table extraction* | **gap:** no pipeline; tables in PDF/XLS need their own extractor |
-| recipe collection | `create_rcollection` + `register_recipe_source` → RecipeWrangler import | **largest gap:** today one bespoke script per source. Needs a generalised import in RecipeWrangler (URL list or feed → parse → profiling chain), and a `license` field on `Source` |
+| textbook (PDF) | `create_textbook` → `upload_artifact` → `extract_textbook_passages` | **built (Phase 4).** PyMuPDF text + heading-aware chunking, in-platform; replaces the external chunker |
+| food-composition table | `create_fctable` ← `profile_fctable` | **built (Phase 4), differently.** `FCTable` is metadata-only — there is no row store — so the spreadsheet is *profiled* into the entity's own fields, not ingested. No console section yet. |
+| recipe collection | `create_rcollection` + `register_recipe_source` → RecipeWrangler import | **largest gap:** today one bespoke script per source. Needs a generalised import in RecipeWrangler (URL list or feed → parse → profiling chain), a `license` field on `Source`, **and a console section — there is none, and the UI service is read-only** |
 
 ## 6. Decisions — taken 2026-09-15, and the one constraint they create
 
@@ -469,7 +469,79 @@ is meant to be run as a local operator tool rather than a shared service.
   DOIs; the failure modes are not symmetric, so the check is loose and a wrong
   guess costs one request that answers "no record".
 
-**Phase 4 — textbooks and FCTs.** The two extraction gaps in §5.
+**Phase 4 — textbooks and FCTs. ✅ Built 2026-09-16, and one half of it was
+mis-scoped in Phase 1.**
+
+*Textbooks — a real extraction gap, now filled.* The catalog has accepted
+passages for a long time and something **outside** the platform produced them;
+the console's own wording is "produced by the external chunker". So a textbook
+could be registered and never actually readable, and the step between was a
+person running a script nobody here owns. `wisefood_mcp/passages.py` does it
+in-platform.
+
+* **No model, so no queue.** A guide's rules must be *understood* to be
+  extracted, which is why that pipeline renders pages for a vision model. A
+  passage is a span of the book with enough context to be retrieved, so the
+  work is text extraction and sensible boundaries. Seconds, not minutes, and
+  the run simply waits rather than polling a worker.
+* **Boundaries that matter**: the heading stack travels with every passage as
+  its `structure_path` (a passage out of a 600-page book without its chapter
+  is unusable); paragraphs are not split unless one exceeds a whole passage;
+  passages overlap, cut at a sentence; and hyphens broken across PDF line ends
+  are healed, because `require- ments` is not a word.
+* **A scanned book is reported, not returned empty.** Images of text yield
+  nothing and need OCR; saying so beats a successful-looking run with no
+  passages.
+* **`structure_tree` is deliberately not sent.** `bulk_replace` wants one in a
+  shape this package has not verified, and guessing at somebody's request
+  schema is how you get a 422 in production. `structure_path` per passage is
+  what retrieval reads.
+* Two things the tests corrected. A first attempt dropped passages matching
+  their predecessor, which discarded whole sections of genuinely repetitive
+  prose *and* broke the `char_start`/`char_end` contiguity the passages
+  advertise; the thing actually worth preventing — a trailing passage holding
+  only the overlap — is now prevented exactly, by tracking whether new text
+  was added.
+
+*FCTs — not an extraction gap at all.* §5 called for a table extractor. Built
+against the code, that is wrong: **`FCTable` is a metadata entity.** There is
+no row-level store behind it anywhere — no entries sub-resource in the client,
+no gateway routes, nothing in the console. An FCT here is a registered
+*reference to* a food composition table, not a copy of one, so an extractor
+would produce thousands of rows with nowhere to put them.
+
+What was actually missing is the arithmetic a curator otherwise does by hand
+with a five-thousand-row spreadsheet open. `profile_fctable` counts the
+entries, recognises the nutrient columns, and measures how much of the grid is
+filled — feeding `number_of_entries`, `nutrient_coverage`,
+`completeness_percent`, `min`/`max_nutrients_per_item`, `measurement_units`
+and `reference_portions`. It runs *before* the entity is created, so the
+catalog never shows a record and then a correction, and it returns the column
+names it judged from so a curator can disagree with it.
+
+Two bugs found by profiling a realistic table: `mg` as a unit matched
+**magnesium**, silently swallowing every "Vitamin C (mg)" and "Iron (mg)"
+column — two-letter element symbols are now absent entirely, because "Fe"
+alone going unrecognised is much better than that. And patterns are ordered
+most-specific-first, or "Saturated fat" reads as "fat".
+
+`fetch_url` now keeps spreadsheets (XLSX/XLS/ODS/CSV/TSV) as pending
+artifacts, not only PDFs — running a composition table through an HTML text
+extractor produces confident nonsense. PDF *table* extraction remains out of
+scope and unbuilt: it is a genuinely different problem, and until there is
+somewhere to put rows it would not pay for itself.
+
+**Console gap, raised 2026-09-16 and not yet closed.** The Asset Manager has
+sections for guides, articles, recipes and textbooks. It has none for **recipe
+collections** or **food composition tables**. Recipe collections have one
+participant-facing page and a read-only UI service (`rcollectionsApi` exposes
+`get`, `list` and `autocomplete` — no create, update or delete); FCTs have
+nothing at all. Phase 4 makes the second one sharper rather than better: the
+integrator can now create `fctable` records that no console screen can browse
+or curate. Closing either means a list page, a detail/edit page, and write
+methods in the UI service against `/v1/rcollections` and `/v1/fctables` —
+larger than it sounds, because the existing sections each carry review status,
+verification and artifact handling.
 
 **Phase 5 — recipes.** Generalised RecipeWrangler import and a `license`
 field on `Source`.
