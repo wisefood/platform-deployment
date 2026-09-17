@@ -105,6 +105,11 @@ local envSource = k.core.v1.envVarSource;
                 // on this platform.
                 INTEGRATOR_MODEL: "openai/gpt-oss-120b",
                 INTEGRATOR_RESEARCH_MODEL: "groq/compound",
+                // Reading rules out of a source that does not already list
+                // them. A plain tool-calling model rather than a Compound one:
+                // Compound's value is its web search, and this reads text it
+                // has already been handed.
+                INTEGRATOR_INFERENCE_MODEL: "openai/gpt-oss-120b",
                 // What one conversational turn may spend before it stops and
                 // says so. An agent with a search tool and no ceiling can
                 // spend an afternoon and a month's quota on one question.
