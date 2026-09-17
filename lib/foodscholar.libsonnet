@@ -113,8 +113,15 @@ local envSource = k.core.v1.envVarSource;
                 // What one conversational turn may spend before it stops and
                 // says so. An agent with a search tool and no ceiling can
                 // spend an afternoon and a month's quota on one question.
-                INTEGRATOR_MAX_STEPS: "12",
-                INTEGRATOR_MAX_TOKENS: "120000",
+                //
+                // 12 was too tight for real work: researching one source is a
+                // catalog check, a search, a fetch and a licence check before
+                // anything is proposed, so a single follow-up question hit the
+                // wall. The loop that made 12 look adequate — the same PDF
+                // fetched seven times — is fixed in the agent rather than
+                // papered over by a low ceiling.
+                INTEGRATOR_MAX_STEPS: "40",
+                INTEGRATOR_MAX_TOKENS: "400000",
                 // The ranking rubric, tunable without a deploy — which was the
                 // point of making them settings, and is not true unless they
                 // are actually here. Licence dominates because a source we may
