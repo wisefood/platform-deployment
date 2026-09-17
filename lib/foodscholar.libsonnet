@@ -83,7 +83,14 @@ local envSource = k.core.v1.envVarSource;
                 // the failure then happens at extraction time with a message
                 // that names the cause, rather than as a pod that will not come
                 // up for a feature nobody may be using.
-                OPENAI_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.openai_key)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
+                // `key`, not `password`. Every other secret in this file uses
+                // `password`, which is exactly why this was wrong: the pattern
+                // was copied rather than checked, and `openai-key` holds a
+                // single field called `key`. Marking it optional would then
+                // have hidden the mistake — the variable would simply be
+                // absent and extraction would fail at use, with nothing at
+                // apply time to say why.
+                OPENAI_API_KEY: envSource.secretKeyRef.withName(config.secrets.api.openai_key)+envSource.secretKeyRef.withKey("key")+envSource.secretKeyRef.withOptional(true),
                 // Source Integrator. Writes stay OFF by default even though the
                 // Phase 2 pipeline works: turning them on is a decision somebody
                 // makes when they are there to watch the first integration, not
