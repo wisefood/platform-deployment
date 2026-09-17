@@ -98,6 +98,11 @@ local envSource = k.core.v1.envVarSource;
                 // the assistant researches, ranks and proposes as before, and an
                 // approved proposal simply has nothing to run.
                 INTEGRATOR_WRITES_ENABLED: "false",
+                // robots.txt addresses crawlers. This is an expert pasting one
+                // URL and waiting for an answer about that document, under a
+                // per-user rate limit. Set "true" for the stricter reading; it
+                // does not affect the SSRF guard either way.
+                INTEGRATOR_RESPECT_ROBOTS: "false",
                 // Named here like every other model this app talks to. The
                 // agent loop needs user-defined tool calling, which rules out
                 // the Compound systems; research is the one place a Compound
