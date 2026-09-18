@@ -97,7 +97,7 @@ local envSource = k.core.v1.envVarSource;
                 // something a deployment inherits from a new image. With it off,
                 // the assistant researches, ranks and proposes as before, and an
                 // approved proposal simply has nothing to run.
-                INTEGRATOR_WRITES_ENABLED: "false",
+                INTEGRATOR_WRITES_ENABLED: "true",
                 // robots.txt addresses crawlers. This is an expert pasting one
                 // URL and waiting for an answer about that document, under a
                 // per-user rate limit. Set "true" for the stricter reading; it
@@ -156,7 +156,55 @@ local envSource = k.core.v1.envVarSource;
                 INTEGRATOR_MAX_RUNS_TOTAL: "10",
                 // Unpaywall asks callers to identify themselves. Ours, never a
                 // user's address.
-                INTEGRATOR_CONTACT_EMAIL: "info@wisefood-project.eu",
+                INTEGRATOR_CONTACT_EMAIL: "admin@wisefood.gr",
+
+                // ----------------------------------------------------------
+                // Knowledge graph browsing
+                //
+                // The graph is built OFFLINE — a job runs the library's phases
+                // and writes shelves, themes and cards into Neo4j and chunks
+                // and cards into Elasticsearch. This service never builds it.
+                // It projects that graph into one browse index and serves
+                // reads from there.
+                //
+                // Off, and deliberately, in the same spirit as
+                // INTEGRATOR_WRITES_ENABLED above: the order is build the
+                // graph, flip this to "true", then POST /graph/reindex once.
+                // Flipping it first is not harmful — the browse routes answer
+                // a readable 503 and the interface says the graph has not been
+                // indexed yet — but it puts an empty feature in front of users
+                // for no gain. Everything else below is wired now so that
+                // turning it on is one word rather than a deployment.
+                KG_ENABLED: "false",
+
+                // The same Elasticsearch the rest of this service uses. Named
+                // "elastic" because that is the service name — config.py's
+                // ELASTIC_HOST default disagrees, and backend/elastic.py is
+                // the one that actually opens connections.
+                KG_ES_URL: "http://elastic:" + std.toString(pim.ports.ELASTIC),
+
+                KG_NEO4J_URL: "bolt://neo4j:" + std.toString(pim.ports.NEO4J_BOLT),
+                // The secret Neo4j itself is started with, passed through
+                // rather than copied. It holds one "user/password" string, the
+                // format Neo4j's own image defines, and config.py splits it.
+                // Storing the password a second time under its own key is how
+                // a rotation ends up half-applied.
+                KG_NEO4J_AUTH: envSource.secretKeyRef.withName(config.secrets.neo4j.neo4j_auth)+envSource.secretKeyRef.withKey("password"),
+
+                // Reads go through the alias. The projector writes
+                // <alias>_<graph_version> and repoints it, so a reader never
+                // sees a half-built index and a rollback is one alias move.
+                KG_BROWSE_ALIAS: "foodscholar_browse",
+
+                // Ceiling per stream, so one unfiltered request on a large
+                // graph cannot hold a worker indefinitely. The terminal event
+                // reports truncated=true when it bites, and the interface says
+                // so rather than showing a small graph.
+                KG_STREAM_MAX_NODES: "20000",
+                // Level of detail for a stream that asked for no depth. The
+                // interface asks for this same number explicitly, so the two
+                // agree about what the depth control is showing.
+                KG_STREAM_DEFAULT_DEPTH: "2",
             })
             + container.withPorts([
                 containerPort.newNamed(pim.ports.FOODSCHOLAR, "fs"),
@@ -169,6 +217,11 @@ local envSource = k.core.v1.envVarSource;
         + deploy.spec.template.spec.withInitContainers([
             podinit.wait4_postgresql("wait4-db", pim, config),
             podinit.wait4_http("wait4-elastic", "http://elastic:"+std.toString(pim.ports.ELASTIC)+"/_cluster/health"),
+            // Neo4j, only because lifespan opens the graph stores at startup
+            // when KG_ENABLED is true. That call is wrapped — a missing graph
+            // is logged and reported by /health rather than stopping the pod —
+            // so this is about a clean first log line, not about survival.
+            podinit.wait4_http("wait4-neo4j", "http://neo4j:"+std.toString(pim.ports.NEO4J)+"/"),
         ]),
 
         fs_svc: svcs.serviceFor(self.deployment),
