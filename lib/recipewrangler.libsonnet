@@ -65,6 +65,26 @@ local envSource = k.core.v1.envVarSource;
                 SEARCH_MAIN_MODEL: "openai/gpt-oss-20b",
                 GUARDRAILS_MODEL: "openai/gpt-oss-20b",
                 PARSE_LLM: "openai/gpt-oss-20b",
+                // The parser's completion budget, and the second reason this
+                // endpoint has answered 503.
+                //
+                // Groq's json_schema mode must emit the WHOLE ParsedRecipe
+                // document inside this budget, and gpt-oss-20b is a reasoning
+                // model whose thinking is charged against the same allowance.
+                // With nothing set the provider applied its own ceiling and a
+                // long recipe came back as
+                //   400 json_validate_failed: "max completion tokens reached
+                //   before generating a valid document"
+                // The Groq SDK does not retry a 400 — it retries 408/409/429
+                // and 5xx — so the app's max_retries=2 never applied and one
+                // overflow was a hard 503. Intermittent by recipe length,
+                // which is what made it read as a flake rather than a bug.
+                //
+                // A cap is not a charge: recipes that finish early are
+                // unaffected, so this only ever buys headroom. Raise it if
+                // long recipes still fail; the app also retries at double this
+                // value before giving up.
+                PARSE_LLM_MAX_TOKENS: "8192",
                 WEIGHT_LLM: "openai/gpt-oss-20b",
                 // The substitution judge, which decides whether a candidate that
                 // lowers a recipe's carbon footprint is actually a sensible swap.
