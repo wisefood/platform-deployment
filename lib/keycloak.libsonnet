@@ -39,6 +39,13 @@ local KEYCLOAK_CONFIG(pim,config) = {
     KC_HTTP_ENABLED: pim.keycloak.KC_HTTP_ENABLED,    
     KC_HEALTH_ENABLED: pim.keycloak.KC_HEALTH_ENABLED,
     KC_HOSTNAME_BACKCHANNEL_DYNAMIC: pim.keycloak.KC_HOSTNAME_BACKCHANNEL_DYNAMIC,
+    // Read by the WiseFood email theme (core-components keycloak/themes/
+    // wisefood, theme.properties). A mail cannot load images from Keycloak's
+    // theme resources, so the logo and EU emblem are the console's public
+    // copies; the logo links to the app.
+    WISEFOOD_APP_URL: config.dns.SCHEME+'://'+config.dns.ROOT_DOMAIN+'/app',
+    WISEFOOD_EMAIL_LOGO_URL: config.dns.SCHEME+'://'+config.dns.ROOT_DOMAIN+'/app/email/wisefood-logo.png',
+    WISEFOOD_EMAIL_EU_URL: config.dns.SCHEME+'://'+config.dns.ROOT_DOMAIN+'/app/email/eu-emblem.png',
 };
 
 {

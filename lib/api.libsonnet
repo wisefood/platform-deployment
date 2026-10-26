@@ -77,6 +77,13 @@ local geoip_fetcher(pim, config) =
                 SMTP_STARTTLS: std.toString(config.api.SMTP_PORT != "465"),
                 SMTP_FROM: config.api.SMTP_USERNAME,
                 SMTP_FROM_NAME: "WiseFood",
+                // Inactivity reminders. Whether and how they are sent (off /
+                // experimental / live, timing, caps) is set at runtime from the
+                // console's Platform Operations page; this only lets the daily
+                // scheduler run. Experimental mode writes to ADMIN_EMAIL when
+                // the console names no test recipients.
+                NOTIFICATIONS_ENABLED: "true",
+                ADMIN_EMAIL: config.admin.email,
                 ANALYTICS_KEEP_FULL_IP: std.toString(pim.observability.ANALYTICS_KEEP_FULL_IP),
                 ANALYTICS_INGEST_SECRET: envSource.secretKeyRef.withName(config.secrets.api.analytics_ingest)+envSource.secretKeyRef.withKey("password")+envSource.secretKeyRef.withOptional(true),
                 PORT: std.toString(pim.ports.API),
