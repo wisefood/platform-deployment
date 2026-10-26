@@ -47,7 +47,7 @@ local secrets = import 'secrets.libsonnet';
             api: {
                 SMTP_SERVER: "mail.wisefood.gr",
                 SMTP_PORT: "465",
-                SMTP_USERNAME: "info@wisefood.gr",
+                SMTP_USERNAME: "admin@wisefood.gr",
             }
         }
         + {
