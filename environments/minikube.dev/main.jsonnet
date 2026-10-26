@@ -83,7 +83,7 @@ local secrets = import 'secrets.libsonnet';
     + {
         images: {
           POSTGRES:"wisefood/postgres:latest",
-          MINIO:"quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z-cpuv1",
+          MINIO:"stelareu/minio:latest",
           KEYCLOAK:"wisefood/keycloak:latest",
           KEYCLOAK_INIT:"wisefood/keycloak-init:latest",
           REDIS:"redis:7",
