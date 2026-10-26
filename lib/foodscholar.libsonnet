@@ -104,16 +104,24 @@ local envSource = k.core.v1.envVarSource;
                 // does not affect the SSRF guard either way.
                 INTEGRATOR_RESPECT_ROBOTS: "false",
                 // Named here like every other model this app talks to. The
-                // agent loop needs user-defined tool calling, which rules out
-                // the Compound systems; research is the one place a Compound
-                // model belongs, because its web search is the only web search
-                // on this platform.
+                // agent loop needs user-defined tool calling.
                 INTEGRATOR_MODEL: "openai/gpt-oss-120b",
-                INTEGRATOR_RESEARCH_MODEL: "groq/compound",
+                // The research model must support Groq's built-in
+                // `browser_search` tool, which since Groq switched off
+                // groq/compound and groq/compound-mini on 2026-09-21 (announced
+                // 2026-08-24, no replacement named) means the GPT-OSS family:
+                // openai/gpt-oss-120b or the cheaper openai/gpt-oss-20b. From
+                // that day every search on the old id answered "the model
+                // groq/compound does not exist", and the integrator only found
+                // sources by stumbling onto DuckDuckGo by hand. wisefood>=0.0.42
+                // searches with browser_search and falls back to DuckDuckGo on
+                // its own when Groq cannot search, so a wrong id here degrades a
+                // search rather than failing it — but it is a misconfiguration,
+                // and the log says so on every search.
+                INTEGRATOR_RESEARCH_MODEL: "openai/gpt-oss-120b",
                 // Reading rules out of a source that does not already list
-                // them. A plain tool-calling model rather than a Compound one:
-                // Compound's value is its web search, and this reads text it
-                // has already been handed.
+                // them. A plain tool-calling model: this reads text it has
+                // already been handed, and never searches.
                 INTEGRATOR_INFERENCE_MODEL: "openai/gpt-oss-120b",
                 // What one conversational turn may spend before it stops and
                 // says so. An agent with a search tool and no ceiling can
