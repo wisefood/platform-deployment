@@ -183,7 +183,7 @@ local envSource = k.core.v1.envVarSource;
                 // indexed yet — but it puts an empty feature in front of users
                 // for no gain. Everything else below is wired now so that
                 // turning it on is one word rather than a deployment.
-                KG_ENABLED: "false",
+                KG_ENABLED: "true",
 
                 // The same Elasticsearch the rest of this service uses. Named
                 // "elastic" because that is the service name — config.py's
