@@ -151,6 +151,11 @@ local dns = import "dns.libsonnet";
             + container.readinessProbe.withPeriodSeconds(10)
             + container.readinessProbe.withTimeoutSeconds(5)
             + container.readinessProbe.withFailureThreshold(3)
+            // A restart must not cut off a plan being made: a planning turn
+            // runs for one to two minutes. The pause lets the Service drop
+            // this pod before uvicorn stops accepting; uvicorn then finishes
+            // the requests it has, within the grace period set below.
+            + container.lifecycle.preStop.exec.withCommand(["sleep", "5"])
             // Requests are what the scheduler packs against; limits are the
             // ceiling. Memory is the binding one — the process holds a session
             // cache and a pool of model clients — and CPU is deliberately
@@ -165,7 +170,9 @@ local dns = import "dns.libsonnet";
         })
         + deploy.spec.template.spec.withInitContainers([
             podinit.wait4_postgresql("wait4-db", pim, config),
-        ]),
+        ])
+        // The 30 s default killed every plan still being made on each deploy.
+        + deploy.spec.template.spec.withTerminationGracePeriodSeconds(210),
 
         fc_svc: svcs.serviceFor(self.deployment),
     }

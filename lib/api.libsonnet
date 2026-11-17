@@ -134,6 +134,19 @@ local geoip_fetcher(pim, config) =
             + container.withPorts([
                 containerPort.newNamed(pim.ports.API, "api"),
             ])
+            // Readiness: uvicorn opens its port only once startup is done, so
+            // an open port means it can serve. Without a probe the new pod got
+            // traffic while still starting and people saw "We lost contact".
+            + container.readinessProbe.tcpSocket.withPort(pim.ports.API)
+            + container.readinessProbe.withInitialDelaySeconds(3)
+            + container.readinessProbe.withPeriodSeconds(5)
+            + container.readinessProbe.withFailureThreshold(3)
+            // Every FoodChat turn passes through here and can take a minute
+            // or two: let the Service drop this pod first, then give those
+            // requests time (grace period below). PID 1 is `sh -c uvicorn`,
+            // which does not pass SIGTERM on, so in-flight requests run until
+            // the grace period ends rather than until they are done.
+            + container.lifecycle.preStop.exec.withCommand(["sleep", "5"])
             + container.withVolumeMounts([
                 volumeMount.new("geoip-vol", "/geoip", true),
             ]),
@@ -142,6 +155,7 @@ local geoip_fetcher(pim, config) =
         'app.kubernetes.io/name': 'api',
         'app.kubernetes.io/component': 'wisefood-api',
         })
+        + deploy.spec.template.spec.withTerminationGracePeriodSeconds(210)
         + deploy.spec.template.spec.withInitContainers([
             podinit.wait4_postgresql("wait4-db", pim, config),
             podinit.wait4_http("wait4-elastic", "http://elastic:"+std.toString(pim.ports.ELASTIC)+"/_cluster/health"),
